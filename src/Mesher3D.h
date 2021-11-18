@@ -1,12 +1,9 @@
-#ifndef FEM_MESH_MESHER3D_H
-#define FEM_MESH_MESHER3D_H
+#ifndef EMESH_MESHER3D_H
+#define EMESH_MESHER3D_H
 #include "generic/math/MathUtility.hpp"
 #include "generic/tools/Log.hpp"
 #include "MeshCommon.h"
-
-namespace fem {
-namespace mesh {
-
+namespace emesh {
 struct Mesh3DFlowDB
 {
     Mesh3DFlowDB()
@@ -63,6 +60,5 @@ public:
     static bool WriteNodeAndEdgeFiles(const std::string & filename, const std::vector<Point3D<coor_t> > & points, const std::list<IndexEdge> & edges);
     static bool LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos);
 };
-}//namespace mesh
-}//namespace fem
- #endif//FEM_MESH_MESHER3D_H
+}//namespace emesh
+ #endif//EMESH_MESHER3D_H

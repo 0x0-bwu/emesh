@@ -1,5 +1,5 @@
-#ifndef FEM_MESH_MESHCOMMON_H
-#define FEM_MESH_MESHCOMMON_H
+#ifndef EMESH_MESHCOMMON_H
+#define EMESH_MESHCOMMON_H
 #include "generic/geometry/TriangleEvaluator.hpp"
 #include "generic/geometry/Triangulator.hpp"
 #include "generic/math/MathUtility.hpp"
@@ -7,8 +7,7 @@
 #include <memory>
 #include <string>
 #include <queue>
-namespace fem {
-namespace mesh {
+namespace emesh {
 
 using namespace generic;
 using namespace generic::geometry;
@@ -49,6 +48,5 @@ using StackLayerInfos = std::vector<StackLayerInfo>;
 using StackLayerPolygons = std::vector<PolygonContainer>;
 using InterfaceIntersections = std::vector<Segment2DContainer>;
 
-}//namespace mesh
-}//namespace fem
-#endif//FEM_MESH_MESHCOMMON_H
+}//namespace emesh
+#endif//EMESH_MESHCOMMON_H

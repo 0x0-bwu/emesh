@@ -1,13 +1,11 @@
-#ifndef FEM_MESH_MESHER2D_H
-#define FEM_MESH_MESHER2D_H
+#ifndef EMESH_MESHER2D_H
+#define EMESH_MESHER2D_H
 #include "generic/geometry/TriangleEvaluator.hpp"
 #include "generic/geometry/Triangulator.hpp"
 #include "generic/math/MathUtility.hpp"
 #include "generic/tools/Log.hpp"
 #include "MeshCommon.h"
-
-namespace fem {
-namespace mesh {
+namespace emesh {
 using namespace generic;
 using namespace generic::geometry;
 using namespace generic::geometry::tri;
@@ -77,6 +75,5 @@ public:
     static bool ExportMeshResult(const std::string & filename, FileFormat format, const Triangulation<Point2D<coor_t> > & triangulation, float_t scale);
     static bool GenerateReport(const std::string & filename, const TriangulationData & triangulation, float_t scale);
 };
-}//namespace mesh
-}//namespace fem
- #endif//FEM_MESHER2D_H
+}//namespace emesh
+ #endif//EMESHER2D_H

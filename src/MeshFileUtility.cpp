@@ -5,7 +5,7 @@
 #include "generic/tools/Parser.hpp"
 #include <memory>
 using namespace generic;
-using namespace fem::mesh;
+using namespace emesh;
 bool MeshFileUtility::LoadMeshCtrlFile(const std::string & txt, MeshCtrl & ctrl)
 {
     std::ifstream in(txt);

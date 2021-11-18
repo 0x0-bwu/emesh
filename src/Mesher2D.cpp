@@ -12,7 +12,7 @@
 #include <memory>
 #include <ctime>
 using namespace generic;
-using namespace fem::mesh;
+using namespace emesh;
 Mesher2D::Mesher2D()
 {
 }

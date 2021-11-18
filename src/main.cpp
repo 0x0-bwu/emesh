@@ -5,7 +5,7 @@
 #include <iostream>
 #include <stdlib.h>
 using namespace generic;
-using namespace fem::mesh;
+using namespace emesh;
 bool ParseOptions(int argc, char *argv[], Mesh2DFlowDB & db, std::ostream & os = std::cout)
 {
     using namespace program_options;

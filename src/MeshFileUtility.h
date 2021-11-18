@@ -1,10 +1,9 @@
-#ifndef FEM_MESH_MESHFILEUTILITY_H
-#define FEM_MESH_MESHFILEUTILITY_H
+#ifndef EMESH_MESHFILEUTILITY_H
+#define EMESH_MESHFILEUTILITY_H
 #include "MeshCommon.h"
 #include "Mesher2D.h"
 #include <string>
-namespace fem {
-namespace mesh {
+namespace emesh {
 
 class MeshFileUtility
 {
@@ -26,6 +25,5 @@ public:
 
 };
 
-}//namespace mesh
-}//namespace fem
-#endif//FEM_MESH_MESHFILEUTILITY_H
+}//namespace emesh
+#endif//EMESH_MESHFILEUTILITY_H

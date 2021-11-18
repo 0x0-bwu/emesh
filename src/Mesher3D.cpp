@@ -12,11 +12,10 @@
 #include <memory>
 #include <ctime>
 using namespace generic;
-using namespace fem::mesh;
+using namespace emesh;
 Mesher3D::Mesher3D()
 {
-    std::string workPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test" + GENERIC_FOLDER_SEPS + "mesh3d";
-    workPath = workPath + GENERIC_FOLDER_SEPS + "subgds";
+    std::string workPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test" + GENERIC_FOLDER_SEPS + "subgds";
     std::string projName = "SubGDS_DIE1";
     
     db.workPath.reset(new std::string(std::move(workPath)));

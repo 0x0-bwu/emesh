@@ -7,3 +7,7 @@
 build
 .sconsign.dblite
 .DS_Store
+*.edge
+*.node
+*.log
+*.dbg
