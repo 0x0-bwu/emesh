@@ -1,0 +1,31 @@
+
+import os
+import sys
+from sys import platform
+
+cwd = os.getcwd()
+main_env = Environment()
+
+main_env.Append(CXXFLAGS=[
+    "-g",
+    "-Wall",
+    "-w",
+    "-Wl,-rpath,\$$ORIGIN",
+    "-std=c++17",
+    "-lpthread"
+])
+
+# Include dirs
+main_env.Append(CPPPATH=[
+    cwd + '/thirdpart',
+    cwd + '/thirdpart/generic'
+])
+
+# SCONS scripts to build
+build_scripts = [
+    'src/SConscript',
+]
+
+for script in build_scripts:
+    env = main_env.Clone()
+    SConscript(script, exports='env')

@@ -1,0 +1,26 @@
+import os
+Import('env')
+
+program_name ='../build/eMesher.exe'
+
+source_files = [
+    'Mesher2D.cpp',
+    'Mesher3D.cpp',
+    'MeshFileUtility.cpp',
+    'main.cpp'
+]
+
+libs_name = [
+    'pthread'
+]
+
+libs_path = [
+    '/usr/local/lib',
+    '../build'
+]
+
+rpath = [
+    '/usr/local/lib',
+    '../build'
+]
+env.Program(program_name,source_files,LIBS=libs_name,LIBPATH=libs_path, RPATH=rpath)
