@@ -17,8 +17,7 @@ main_env.Append(CXXFLAGS=[
 
 # Include dirs
 main_env.Append(CPPPATH=[
-    cwd + '/thirdpart',
-    cwd + '/thirdpart/generic'
+    cwd + '/thirdpart'
 ])
 
 # SCONS scripts to build
