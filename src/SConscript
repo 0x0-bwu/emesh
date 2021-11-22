@@ -7,6 +7,9 @@ source_files = [
     'Mesher2D.cpp',
     'Mesher3D.cpp',
     'MeshFileUtility.cpp',
+    'Tetrahedralizator.cpp',
+    '../thirdpart/tetgen/predicates.cxx',
+    '../thirdpart/tetgen/tetgen.cxx',
     'main.cpp'
 ]
 

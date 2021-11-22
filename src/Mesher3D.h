@@ -1,5 +1,6 @@
 #ifndef EMESH_MESHER3D_H
 #define EMESH_MESHER3D_H
+#include "generic/geometry/Tetrahedralization.hpp"
 #include "generic/math/MathUtility.hpp"
 #include "generic/tools/Log.hpp"
 #include "MeshCommon.h"
@@ -44,6 +45,8 @@ private:
     bool RunGenerateMesh();
 };
 
+using TetrahedronData = generic::geometry::tet::Tetrahedralization<Point3D<Mesher3D::coor_t> >;
+
 class MeshFlow3D
 {
     friend class Mesher3D;
@@ -59,6 +62,7 @@ public:
     static bool SplitOverlengthEdges(std::vector<Point3D<coor_t> > & points, std::list<IndexEdge> & edges, coor_t maxLength);
     static bool WriteNodeAndEdgeFiles(const std::string & filename, const std::vector<Point3D<coor_t> > & points, const std::list<IndexEdge> & edges);
     static bool LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos);
+    static bool Tetrahedralize(const std::vector<Point3D<coor_t> > & points, const std::list<IndexEdge> & edges, TetrahedronData & t);
 };
 }//namespace emesh
  #endif//EMESH_MESHER3D_H

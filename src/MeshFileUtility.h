@@ -22,7 +22,6 @@ public:
 
     //3d
     static bool LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos);
-
 };
 
 }//namespace emesh

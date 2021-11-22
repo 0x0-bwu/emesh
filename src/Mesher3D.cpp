@@ -8,6 +8,7 @@
 #include "generic/geometry/Utility.hpp"
 #include "generic/tools/FileSystem.hpp"
 #include "generic/tools/Tools.hpp"
+#include "Tetrahedralizator.h"
 #include "MeshFileUtility.h"
 #include <memory>
 #include <ctime>
@@ -113,6 +114,10 @@ bool Mesher3D::RunGenerateMesh()
         return false;
     }
     else log::Info("finish writing node and edge files"); 
+
+    //test
+    TetrahedronData tet;
+    MeshFlow3D::Tetrahedralize(*db.points, *db.edges, tet);
     return true;
 }
 
@@ -338,13 +343,17 @@ bool MeshFlow3D::WriteNodeAndEdgeFiles(const std::string & filename, const std::
         plc.surfaces[index].faces.push_back(IdxPolyline{ edge.v1(), edge.v2()});
         index++;
     }
-    // std::string plcFile = filename + ".poly";
-    // geometry::tet::WritePlcToPolyFile(plcFile, plc);//wbtest
     return geometry::tet::WritePlcToNodeAndEdgeFiles(filename, plc);
 }
 
 bool MeshFlow3D::LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos)
 {
     return MeshFileUtility::LoadLayerStackInfos(filename, infos);
+}
+
+bool MeshFlow3D::Tetrahedralize(const std::vector<Point3D<coor_t> > & points, const std::list<IndexEdge> & edges, TetrahedronData & t)
+{
+    Tetrahedralizator tetrahedralizator(t);
+    tetrahedralizator.Tetrahedralize(points, edges);
 }
 

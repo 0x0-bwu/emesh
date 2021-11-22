@@ -1,2 +1,2 @@
 # emesh
-ecad 2d/3d mesher
+ecad 2d/3d mesher (unfinished)

@@ -5,6 +5,7 @@
 *.so
 *.exe
 build
+settings.json
 .sconsign.dblite
 .DS_Store
 *.edge
