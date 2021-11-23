@@ -205,38 +205,8 @@ bool Mesher3D::RunGenerateMesh()
     MeshFlow3D::ExportVtkFile(filename, *db.tetras);
     log::Info("finish writing mesh result files...");
 
-    //
-    // db.edges.reset(new IndexEdgeList);
-    // db.points.reset(new Point3DContainer);
-    // std::vector<StackLayerInfo> infos { {0, 3048}, {-3048, 20320}, {-23368, 3048}, {-26416, 20320}, {-46736, 3048}, {-49784, 20320}, {-70104, 3048} };
-
-    // log::Info("start to extract topology...");
-    // res = MeshFlow3D::ExtractTopology(*db.inGoems, *db.sInfos, *db.intersections, *db.points, *db.edges);
-    // if(!res){
-    //     log::Error("fail to extract topology!");
-    //     return false;
-    // }
-    // else log::Info("finish extracting topology");
-
-    //
-    // log::Info("start to split overlength edges...");
-    // coor_t threshold = std::max(bbox.Length(), bbox.Width()) / 10;
-    // res = MeshFlow3D::SplitOverlengthEdges(*db.points, *db.edges, threshold);
-    // if(!res){
-    //     log::Error("fail to split overlength edges!");
-    //     return false;
-    // }
-    // else log::Info("finish splitting overlength edges, threshold: %1%", threshold);
-
-    //
-    // std::string filename = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName;
-    // log::Info("start to write node and edge files...");
-    // res = MeshFlow3D::WriteNodeAndEdgeFiles(filename, *db.points, *db.edges);
-    // if(!res){
-    //     log::Error("fail to write node and edge files!");
-    //     return false;
-    // }
-    // else log::Info("finish writing node and edge files"); 
+    log::Info("total nodes: %1%", db.tetras->vertices.size());
+    log::Info("total elements: %1%", db.tetras->tetrahedrons.size());
 
     return true;
 }
@@ -576,9 +546,13 @@ bool MeshFlow3D::Tetrahedralize(const std::vector<Point3D<coor_t> > & points, co
 
 bool MeshFlow3D::MergeTetrahedrons(TetrahedronData & master, TetrahedronDataVec & tetVec)
 {
+    size_t count = 0;
     TetrahedronDataMerger merger(master);
-    for(size_t i = 0; i < tetVec.size(); ++i)
+    for(size_t i = 0; i < tetVec.size(); ++i){
         merger.Merge(tetVec[i]);
+        count += tetVec[i].tetrahedrons.size();
+    }
+    GENERIC_ASSERT(count == master.tetrahedrons.size())
     return true;
 }
 
