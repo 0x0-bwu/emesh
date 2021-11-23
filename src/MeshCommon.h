@@ -13,13 +13,13 @@ using namespace generic;
 using namespace generic::geometry;
 using namespace generic::geometry::tri;
 using generic::common::float_type;
+using coor_t = int64_t;
 
 enum class FileFormat { DomDmc, WKT, MSH };
 enum class MeshTask { MeshGeneration, MeshEvaluation };
 
 struct MeshCtrl
 {
-    using coor_t = int64_t;
     using float_t = float_type<coor_t>;
     coor_t tolerance = 0;
     coor_t maxEdgeLen = 0;
@@ -30,19 +30,18 @@ struct MeshCtrl
 
 struct StackLayerInfo
 {
-    using coor_t = int64_t;
     coor_t elevation;
     coor_t thickness;
 };
 
 using MeshTasks = std::queue<MeshTask>;
 using IndexEdgeList = std::list<IndexEdge>;
-using Point2DContainer = std::vector<Point2D<typename MeshCtrl::coor_t> >;
-using Point3DContainer = std::vector<Point3D<typename MeshCtrl::coor_t> >;
-using PolygonContainer = std::list<Polygon2D<typename MeshCtrl::coor_t> >;
-using TriangulationData = Triangulation<Point2D<typename MeshCtrl::coor_t> >;
-using Segment2DContainer = std::vector<Segment2D<typename MeshCtrl::coor_t> >;
-using Segment3DContainer = std::vector<Segment3D<typename MeshCtrl::coor_t> >;
+using Point2DContainer = std::vector<Point2D<coor_t> >;
+using Point3DContainer = std::vector<Point3D<coor_t> >;
+using PolygonContainer = std::list<Polygon2D<coor_t> >;
+using TriangulationData = Triangulation<Point2D<coor_t> >;
+using Segment2DContainer = std::vector<Segment2D<coor_t> >;
+using Segment3DContainer = std::vector<Segment3D<coor_t> >;
 
 using StackLayerInfos = std::vector<StackLayerInfo>;
 using StackLayerPolygons = std::vector<PolygonContainer>;

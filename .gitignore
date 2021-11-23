@@ -4,6 +4,7 @@
 *.a
 *.so
 *.exe
+*.vtk
 build
 settings.json
 .sconsign.dblite

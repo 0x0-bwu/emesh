@@ -1,4 +1,5 @@
 #include "MeshFileUtility.h"
+#include "generic/geometry/TetrahedralizationIO.hpp"
 #include "generic/geometry/Transform.hpp"
 #include "generic/tools/FileSystem.hpp"
 #include "generic/tools/Tools.hpp"
@@ -315,6 +316,7 @@ bool MeshFileUtility::LoadLayerStackInfos(const std::string & filename, StackLay
     size_t line = 0;
 
     size_t layers;
+    double scale = 1.0;
     double elevation, thickness;
     while(!in.eof()){
         line++;
@@ -324,6 +326,7 @@ bool MeshFileUtility::LoadLayerStackInfos(const std::string & filename, StackLay
         auto items = parser::Split(tmp, sp);
         if(items.size() < 1) return false;
         layers = std::stol(items[0]);
+        if(items.size() > 1) scale = std::stod(items[1]);
         break;
     }
 
@@ -336,8 +339,8 @@ bool MeshFileUtility::LoadLayerStackInfos(const std::string & filename, StackLay
 
         auto items = parser::Split(tmp, sp);
         if(items.size() < 2) return false;
-        elevation = std::stod(items[0]);
-        thickness = std::stod(items[1]);
+        elevation = std::stod(items[0]) * scale;
+        thickness = std::stod(items[1]) * scale;
         infos.push_back(StackLayerInfo{});
         infos.back().elevation = elevation;
         infos.back().thickness = thickness;
@@ -346,3 +349,7 @@ bool MeshFileUtility::LoadLayerStackInfos(const std::string & filename, StackLay
     return infos.size() == layers;
 }
 
+bool MeshFileUtility::ExportVtkFile(const std::string & vtk, const TetrahedronData & t)
+{
+    return geometry::tet::WriteVtkFile(vtk, t);
+}

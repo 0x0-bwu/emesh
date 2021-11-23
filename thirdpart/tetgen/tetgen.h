@@ -2299,7 +2299,7 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 
 void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out, 
-                    tetgenio *addin = NULL, tetgenio *bgmin = NULL);
+                    tetgenio *addin = NULL, tetgenio *bgmin = NULL, tetgenmesh * mesh = NULL);
 
 #ifdef TETLIBRARY
 void tetrahedralize(char *switches, tetgenio *in, tetgenio *out,

@@ -32108,9 +32108,11 @@ void tetgenmesh::outmesh2vtk(char* ofilename)
 ///////////////////////////////////////////////////////////////////////////////
 
 void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
-                    tetgenio *addin, tetgenio *bgmin)
+                    tetgenio *addin, tetgenio *bgmin, tetgenmesh * mesh)
 {
-  tetgenmesh m;
+  // tetgenmesh m;//wbtest
+  if(nullptr == mesh) return;
+  tetgenmesh & m = *mesh;
   clock_t tv[12], ts[5]; // Timing informations (defined in time.h)
   REAL cps = (REAL) CLOCKS_PER_SEC;
 

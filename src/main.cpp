@@ -61,6 +61,7 @@ int main(int argc, char *argv[])
     auto mesher = std::unique_ptr<Mesher3D>(new Mesher3D);
 
     auto res = mesher->Run();
+    // auto res = mesher->RunTest();
     if(res) return EXIT_SUCCESS;
     return EXIT_FAILURE;
 };

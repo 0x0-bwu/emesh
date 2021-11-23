@@ -1,6 +1,7 @@
 #ifndef EMESH_MESHFILEUTILITY_H
 #define EMESH_MESHFILEUTILITY_H
 #include "MeshCommon.h"
+#include "Mesher3D.h"
 #include "Mesher2D.h"
 #include <string>
 namespace emesh {
@@ -8,7 +9,6 @@ namespace emesh {
 class MeshFileUtility
 {
     friend class Mesher2D;
-    using coor_t = typename Mesher2D::coor_t;
     using float_t = typename Mesher2D::float_t;
 public:
     //2d
@@ -22,6 +22,7 @@ public:
 
     //3d
     static bool LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos);
+    static bool ExportVtkFile(const std::string & vtk, const TetrahedronData & t);
 };
 
 }//namespace emesh

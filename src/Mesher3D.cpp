@@ -18,6 +18,9 @@ Mesher3D::Mesher3D()
 {
     std::string workPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test" + GENERIC_FOLDER_SEPS + "subgds";
     std::string projName = "SubGDS_DIE1";
+
+    // std::string workPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test" + GENERIC_FOLDER_SEPS + "fccsp";
+    // std::string projName = "layer";
     
     db.workPath.reset(new std::string(std::move(workPath)));
     db.projName.reset(new std::string(std::move(projName)));
@@ -37,6 +40,15 @@ bool Mesher3D::Run()
 
     CloseLogger();
     return res;
+}
+
+bool Mesher3D::RunTest()
+{
+    //test
+    TetrahedronData tet;
+    std::vector<Point3D<coor_t> > points {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}, {0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}};
+    std::list<IndexEdge> edges {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
+    return MeshFlow3D::Tetrahedralize(points, edges, tet);
 }
 
 bool Mesher3D::RunGenerateMesh()
@@ -74,6 +86,7 @@ bool Mesher3D::RunGenerateMesh()
     else log::Info("finish simplifying geometries, tolerance: %1%", tolerance);
 
     //
+    log::Info("start extract interface intersections...");
     db.intersections.reset(new InterfaceIntersections);
     res = MeshFlow3D::ExtractInterfaceIntersections(*db.inGoems, *db.intersections);
     if(!res){
@@ -83,41 +96,75 @@ bool Mesher3D::RunGenerateMesh()
     else log::Info("finish extracting interface intersections");
 
     //
-    db.edges.reset(new IndexEdgeList);
-    db.points.reset(new Point3DContainer);
+    log::Info("start build mesh sketch layers...");
+    db.meshSktLyrs.reset(new MeshSketchLayers3D);
+    res = MeshFlow3D::BuildMeshSketchLayers(*db.inGoems, *db.intersections, *db.sInfos, *db.meshSktLyrs);
+    if(!res){
+        log::Error("fail to build mesh sketch layers");
+        return false;
+    }
+    else log::Info("finish building mesh sketch layers");
+
+    //
+    log::Info("start generate mesh per sketch layer...");
+    auto tetVec = std::make_unique<TetrahedronDataVec>();
+    res = MeshFlow3D::GenerateTetrahedronsFromSketchLayers(*db.meshSktLyrs, *tetVec);
+    if(!res){
+        log::Error("fail to generate mesh per sketch layer");
+        return false;
+    }
+    else log::Info("finish generating mesh per sketch layer");
+
+    //
+    log::Info("start merge mesh results...");
+    db.tetras.reset(new TetrahedronData);
+    res = MeshFlow3D::MergeTetrahedrons(*db.tetras, *tetVec);
+    if(!res){
+        log::Error("fail to merge mesh results");
+        return false;
+    }
+    else log::Info("finish merging mesh results");
+
+    log::Info("start write mesh result files...");
+    for(size_t i = 0; i < tetVec->size(); ++i){
+        std::string filename = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName + "_" + std::to_string(i + 1) + ".vtk";
+        MeshFlow3D::ExportVtkFile(filename, tetVec->at(i));
+    }
+    log::Info("finish writing mesh result files...");
+
+    //
+    // db.edges.reset(new IndexEdgeList);
+    // db.points.reset(new Point3DContainer);
     // std::vector<StackLayerInfo> infos { {0, 3048}, {-3048, 20320}, {-23368, 3048}, {-26416, 20320}, {-46736, 3048}, {-49784, 20320}, {-70104, 3048} };
 
-    log::Info("start to extract topology...");
-    res = MeshFlow3D::ExtractTopology(*db.inGoems, *db.sInfos, *db.intersections, *db.points, *db.edges);
-    if(!res){
-        log::Error("fail to extract topology!");
-        return false;
-    }
-    else log::Info("finish extracting topology");
+    // log::Info("start to extract topology...");
+    // res = MeshFlow3D::ExtractTopology(*db.inGoems, *db.sInfos, *db.intersections, *db.points, *db.edges);
+    // if(!res){
+    //     log::Error("fail to extract topology!");
+    //     return false;
+    // }
+    // else log::Info("finish extracting topology");
 
     //
-    log::Info("start to split overlength edges...");
-    coor_t threshold = std::max(bbox.Length(), bbox.Width()) / 10;
-    res = MeshFlow3D::SplitOverlengthEdges(*db.points, *db.edges, threshold);
-    if(!res){
-        log::Error("fail to split overlength edges!");
-        return false;
-    }
-    else log::Info("finish splitting overlength edges, threshold: %1%", threshold);
+    // log::Info("start to split overlength edges...");
+    // coor_t threshold = std::max(bbox.Length(), bbox.Width()) / 10;
+    // res = MeshFlow3D::SplitOverlengthEdges(*db.points, *db.edges, threshold);
+    // if(!res){
+    //     log::Error("fail to split overlength edges!");
+    //     return false;
+    // }
+    // else log::Info("finish splitting overlength edges, threshold: %1%", threshold);
 
     //
-    std::string filename = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName;
-    log::Info("start to write node and edge files...");
-    res = MeshFlow3D::WriteNodeAndEdgeFiles(filename, *db.points, *db.edges);
-    if(!res){
-        log::Error("fail to write node and edge files!");
-        return false;
-    }
-    else log::Info("finish writing node and edge files"); 
+    // std::string filename = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName;
+    // log::Info("start to write node and edge files...");
+    // res = MeshFlow3D::WriteNodeAndEdgeFiles(filename, *db.points, *db.edges);
+    // if(!res){
+    //     log::Error("fail to write node and edge files!");
+    //     return false;
+    // }
+    // else log::Info("finish writing node and edge files"); 
 
-    //test
-    TetrahedronData tet;
-    MeshFlow3D::Tetrahedralize(*db.points, *db.edges, tet);
     return true;
 }
 
@@ -212,6 +259,107 @@ bool MeshFlow3D::ExtractInterfaceIntersection(const PolygonContainer & layer1, c
     return true;
 }
 
+bool MeshFlow3D::BuildMeshSketchLayers(const StackLayerPolygons & polygons, const InterfaceIntersections & intersections, const StackLayerInfos & infos, MeshSketchLayers3D & meshSktLyrs)
+{
+    if(polygons.size() != (intersections.size() + 1)) return false;
+    if(polygons.size() != infos.size()) return false;
+
+    meshSktLyrs.clear();
+    for(size_t i = 0; i < polygons.size(); ++i){
+        MeshSketchLayer3D layer(polygons[i]);
+        layer.SetTopBotHeight(infos[i].elevation, infos[i].elevation - infos[i].thickness);
+        if(i == 0) layer.SetConstrains(nullptr, &(intersections[i]));
+        else if(i == (polygons.size() - 1)) layer.SetConstrains(&(intersections[i - 1]), nullptr);
+        else layer.SetConstrains(&(intersections[i - 1]), &(intersections[i]));
+        meshSktLyrs.emplace_back(std::move(layer));
+    }
+    return true;
+}
+
+bool MeshFlow3D::GenerateTetrahedronsFromSketchLayers(const MeshSketchLayers3D & meshSktLyrs, TetrahedronDataVec & tetVec)
+{
+    bool res = true;
+    tetVec.resize(meshSktLyrs.size());
+    for(size_t i = 0; i < meshSktLyrs.size(); ++i)
+        res = res && GenerateTetrahedronsFromSketchLayer(meshSktLyrs[i], tetVec[i]);
+    return res;
+}
+
+bool MeshFlow3D::GenerateTetrahedronsFromSketchLayer(const MeshSketchLayer3D & meshSktLyr, TetrahedronData & tet)
+{
+    auto edges = std::make_unique<std::list<IndexEdge> >();
+    auto points = std::make_unique<std::vector<Point3D<coor_t> > >();
+    if(!ExtractTopology(meshSktLyr, *points, *edges)) return false;
+
+    auto bbox = Extent(points->begin(), points->end());
+    coor_t threshold = std::max(bbox.Length(), bbox.Width()) / 10;//wbtest
+    if(!SplitOverlengthEdges(*points, *edges, threshold)) return false;
+
+    if(!Tetrahedralize(*points, *edges, tet)) return false;
+
+    return true;
+}
+
+bool MeshFlow3D::ExtractTopology(const MeshSketchLayer3D & meshSktLyr, std::vector<Point3D<coor_t> > & points, std::list<IndexEdge> & edges)
+{
+    edges.clear(); 
+    points.clear();
+
+    using EdgeSet = topology::UndirectedIndexEdgeSet;
+    using LayerIdxMap = std::unordered_map<coor_t, size_t>;
+    using PointIdxMap = std::unordered_map<Point2D<coor_t>, size_t, PointHash<coor_t> >;
+
+    EdgeSet edgeSet;
+    PointIdxMap ptIdxMap[2];
+
+    auto getH = [&meshSktLyr](size_t layer){ return layer == 0 ? meshSktLyr.topH : meshSktLyr.botH; };//layer: 0-top, 1-bot
+    auto getIndex = [&getH, &ptIdxMap, &points](const Point2D<coor_t> & p, size_t layer) mutable //layer: 0-top, 1-bot
+    {
+        if(!ptIdxMap[layer].count(p)){
+            auto index = points.size();
+            ptIdxMap[layer].insert(std::make_pair(p, index));
+            points.push_back(Point3D<coor_t>(p[0], p[1], getH(layer)));
+        }
+        return ptIdxMap[layer].at(p);
+    };
+
+    auto addEdge = [&edges, &edgeSet](IndexEdge && e) mutable
+    {
+        if(e.v1() == e.v2()) return;
+        if(edgeSet.count(e)) return;
+        edges.emplace_back(e);
+        edgeSet.insert(e);
+    };
+
+    for(size_t i = 0; i < 2; ++i){
+        if(meshSktLyr.constrains[i]){
+            for(const auto & segment : *(meshSktLyr.constrains[i])){
+                IndexEdge e(getIndex(segment[0], i), getIndex(segment[1], i));
+                addEdge(std::move(e));
+            }
+        }
+        else{
+            for(const auto & polygon : meshSktLyr.polygons){
+                size_t size = polygon.Size();
+                 for(size_t j = 0; j < size; ++j){
+                    size_t k = (j + 1) % size;
+                    IndexEdge e(getIndex(polygon[j], i), getIndex(polygon[k], i));
+                    addEdge(std::move(e));
+                }
+            } 
+        }
+    }
+
+    for(const auto & polygon : meshSktLyr.polygons){
+        size_t size = polygon.Size();
+        for(size_t i = 0; i < size; ++i){
+            IndexEdge e(getIndex(polygon[i], 0), getIndex(polygon[i], 1));
+            addEdge(std::move(e));
+        }
+    }
+    return true;
+}
+
 bool MeshFlow3D::ExtractTopology(StackLayerPolygons & polygons, const std::vector<StackLayerInfo> & infos, const InterfaceIntersections & intersections,
                                  std::vector<Point3D<coor_t> > & points, std::list<IndexEdge> & edges)
 {
@@ -233,10 +381,6 @@ bool MeshFlow3D::ExtractTopology(StackLayerPolygons & polygons, const std::vecto
         lyrIdx++;
     }
     heights[lyrIdx] = infos.back().elevation - infos.back().thickness;
-
-    // for(size_t i = 0 ; i < heights.size(); ++i){
-    //     heights[i] *= 100;
-    // }//wbtest
 
     auto getIndex = [&lyrPtIdxMap, &heights, &points](const Point2D<coor_t> & p, size_t layer) mutable
     {
@@ -356,4 +500,24 @@ bool MeshFlow3D::Tetrahedralize(const std::vector<Point3D<coor_t> > & points, co
     Tetrahedralizator tetrahedralizator(t);
     tetrahedralizator.Tetrahedralize(points, edges);
 }
+
+bool MeshFlow3D::MergeTetrahedrons(TetrahedronData & master, TetrahedronDataVec & tetVec)
+{
+    bool res = true;
+    for(size_t i = 0; i < tetVec.size(); ++i)
+        res = res && MergeTetrahedrons(master, tetVec[i]);
+    return res;
+}
+
+bool MeshFlow3D::MergeTetrahedrons(TetrahedronData & master, TetrahedronData & subTet)
+{
+    return true;
+}
+
+bool MeshFlow3D::ExportVtkFile(const std::string & filename, const TetrahedronData & tet)
+{
+    return MeshFileUtility::ExportVtkFile(filename, tet);
+}
+
+
 

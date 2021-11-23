@@ -42,7 +42,6 @@ struct Mesh2DFlowDB
 class Mesher2D
 {
 public:
-    using coor_t = int64_t;
     using float_t = float_type<coor_t>;
     using MeshEvaluation = typename TriangleEvaluator<Point2D<coor_t> >::Evaluation;
 
@@ -61,7 +60,6 @@ private:
 class MeshFlow2D
 {
     friend class Mesher2D;
-    using coor_t = typename Mesher2D::coor_t;
     using float_t = typename Mesher2D::float_t;
 public:
     static bool LoadGeometryFiles(const std::string & filename, FileFormat format, float_t scale2Int, std::list<Polygon2D<coor_t> > & polygons);
