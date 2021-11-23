@@ -1,6 +1,7 @@
 #ifndef EMESH_MESHER3D_H
 #define EMESH_MESHER3D_H
 #include "generic/geometry/Tetrahedralization.hpp"
+#include "generic/geometry/HashFunction.hpp"
 #include "generic/math/MathUtility.hpp"
 #include "generic/tools/Log.hpp"
 #include "MeshCommon.h"
@@ -29,6 +30,23 @@ struct MeshSketchLayer3D
 using MeshSketchLayers3D = std::vector<MeshSketchLayer3D>;
 using TetrahedronData = generic::geometry::tet::Tetrahedralization<Point3D<coor_t> >;
 using TetrahedronDataVec = std::vector<TetrahedronData>;
+
+class TetrahedronDataMerger
+{
+    using PointIndexMap = std::unordered_map<Point2D<coor_t>, size_t, PointHash<coor_t> >;
+    using LayerPointIndexMap = std::unordered_map<coor_t, PointIndexMap>;
+public:
+    explicit TetrahedronDataMerger(TetrahedronData & data);
+
+    void Merge(const TetrahedronData & data);
+
+private:
+    void BuildIndexMap();
+
+private:
+    TetrahedronData & m_data;
+    LayerPointIndexMap m_indexMap;
+};
 
 struct Mesh3DFlowDB
 {
@@ -92,7 +110,6 @@ public:
     static bool LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos);
     static bool Tetrahedralize(const std::vector<Point3D<coor_t> > & points, const std::list<IndexEdge> & edges, TetrahedronData & tet);
     static bool MergeTetrahedrons(TetrahedronData & master, TetrahedronDataVec & tetVec);
-    static bool MergeTetrahedrons(TetrahedronData & master, TetrahedronData & subTet);
     static bool ExportVtkFile(const std::string & filename, const TetrahedronData & tet);
 };
 }//namespace emesh

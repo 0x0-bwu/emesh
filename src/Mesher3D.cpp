@@ -14,6 +14,76 @@
 #include <ctime>
 using namespace generic;
 using namespace emesh;
+
+TetrahedronDataMerger::TetrahedronDataMerger(TetrahedronData & data)
+ : m_data(data)
+{
+    BuildIndexMap();
+}
+
+void TetrahedronDataMerger::BuildIndexMap()
+{
+    for(size_t v = 0; v < m_data.vertices.size(); ++v){
+        const auto & p = m_data.points[m_data.vertices[v].index];
+        if(!m_indexMap.count(p[2]))
+            m_indexMap.insert(std::make_pair(p[2], PointIndexMap{}));
+        auto & vertexIndexMap = m_indexMap[p[2]];
+        vertexIndexMap.insert(std::make_pair(Point2D<coor_t>(p[0], p[1]), v));
+    }
+}
+
+void TetrahedronDataMerger::Merge(const TetrahedronData & data)
+{
+    using Vertex = typename TetrahedronData::Vertex;
+    std::unordered_set<size_t> exists;
+    std::unordered_map<size_t, size_t> map2this;
+    for(size_t v = 0; v < data.vertices.size(); ++v){
+        const auto & p = data.points[data.vertices[v].index];
+        if(!m_indexMap.count(p[2]))
+            m_indexMap.insert(std::make_pair(p[2], PointIndexMap{}));
+        auto & vertexIndexMap = m_indexMap[p[2]];
+        auto p2d = Point2D<coor_t>(p[0], p[1]);
+        auto it = vertexIndexMap.find(p2d);
+        if(it != vertexIndexMap.end()){
+            exists.insert(v);
+            map2this.insert(std::make_pair(v, *it));
+        }
+        else{
+            size_t pIndex = m_data.points.size();
+            m_data.points.push_back(p);
+            size_t vIndex = m_data.vertices.size();
+            m_data.vertices.push_back(Vertex{});
+            m_data.vertices.back().index = pIndex;
+            map2this.insert(std::make_pair(v, vIndex));
+        }
+    }
+    size_t tetOffset = m_data.tetrahedrons.size();
+    m_data.tetrahedrons.insert(m_data.tetrahedrons.end(), data.tetrahedrons.begin(), data.tetrahedrons.end());
+    for(size_t v = 0; v < data.vertices.size(); ++v){
+        const auto & origin = data.vertices[v];
+        const auto & vertex = m_data.vertices[map2this[v]];
+        for(auto tet : origin.tetrahedrons)
+            vertex.tetrahedrons.insert(tet + tetOffset);
+    }
+
+    for(size_t t = tetOffset; t < m_data.tetrahedrons.size(); ++t){
+        const auto & tetrahedron = m_data.tetrahedrons[t];
+        for(size_t i = 0; i < 4; ++i)
+            tetrahedron.vertices[i] = map2this[tetrahedron.vertices[i]];
+        for(size_t i = 0; i < 4; ++i){
+            if(tetrahedron.neighbors[i] != noNeighbor)
+                tetrahedron.neighbors[i] += tetOffset;
+            else {
+                //todo connect with this
+            }
+        }        
+    }
+
+    for(const auto & edge : data.fixedEdges){
+        m_data.fixedEdges.insert(IndexEdge(map2this[edge.v1()], map2this[edge.v2()]));
+    }
+}
+
 Mesher3D::Mesher3D()
 {
     std::string workPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test" + GENERIC_FOLDER_SEPS + "subgds";
@@ -130,6 +200,8 @@ bool Mesher3D::RunGenerateMesh()
         std::string filename = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName + "_" + std::to_string(i + 1) + ".vtk";
         MeshFlow3D::ExportVtkFile(filename, tetVec->at(i));
     }
+    std::string filename = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName + ".vtk";
+    MeshFlow3D::ExportVtkFile(filename, *db.tetras);
     log::Info("finish writing mesh result files...");
 
     //
@@ -503,14 +575,9 @@ bool MeshFlow3D::Tetrahedralize(const std::vector<Point3D<coor_t> > & points, co
 
 bool MeshFlow3D::MergeTetrahedrons(TetrahedronData & master, TetrahedronDataVec & tetVec)
 {
-    bool res = true;
+    TetrahedronDataMerger merger(master);
     for(size_t i = 0; i < tetVec.size(); ++i)
-        res = res && MergeTetrahedrons(master, tetVec[i]);
-    return res;
-}
-
-bool MeshFlow3D::MergeTetrahedrons(TetrahedronData & master, TetrahedronData & subTet)
-{
+        merger.Merge(tetVec[i]);
     return true;
 }
 
