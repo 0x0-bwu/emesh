@@ -46,7 +46,7 @@ void TetrahedronDataMerger::Merge(const TetrahedronData & data)
         auto it = vertexIndexMap.find(p2d);
         if(it != vertexIndexMap.end()){
             exists.insert(v);
-            map2this.insert(std::make_pair(v, *it));
+            map2this.insert(std::make_pair(v, it->second));
         }
         else{
             size_t pIndex = m_data.points.size();
@@ -61,17 +61,18 @@ void TetrahedronDataMerger::Merge(const TetrahedronData & data)
     m_data.tetrahedrons.insert(m_data.tetrahedrons.end(), data.tetrahedrons.begin(), data.tetrahedrons.end());
     for(size_t v = 0; v < data.vertices.size(); ++v){
         const auto & origin = data.vertices[v];
-        const auto & vertex = m_data.vertices[map2this[v]];
-        for(auto tet : origin.tetrahedrons)
+        auto & vertex = m_data.vertices[map2this[v]];
+        for(auto tet : origin.tetrahedrons){
             vertex.tetrahedrons.insert(tet + tetOffset);
+        }
     }
 
     for(size_t t = tetOffset; t < m_data.tetrahedrons.size(); ++t){
-        const auto & tetrahedron = m_data.tetrahedrons[t];
+        auto & tetrahedron = m_data.tetrahedrons[t];
         for(size_t i = 0; i < 4; ++i)
             tetrahedron.vertices[i] = map2this[tetrahedron.vertices[i]];
         for(size_t i = 0; i < 4; ++i){
-            if(tetrahedron.neighbors[i] != noNeighbor)
+            if(tetrahedron.neighbors[i] != tet::noNeighbor)
                 tetrahedron.neighbors[i] += tetOffset;
             else {
                 //todo connect with this
