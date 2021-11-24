@@ -12,7 +12,7 @@ class MeshFileUtility
     using float_t = typename Mesher2D::float_t;
 public:
     //2d
-    static bool LoadMeshCtrlFile(const std::string & txt, MeshCtrl & ctrl);
+    static bool LoadMeshCtrlFile(const std::string & txt, MeshCtrl2D & ctrl);
     static bool LoadWktFile(const std::string & wkt, float_t scale2Int, std::list<Polygon2D<coor_t> > & polygons);
     static bool LoadWktFile(const std::string & wkt, std::list<PolygonWithHoles2D<coor_t> > & pwhs);//wbtest
     static bool LoadDomDmcFiles(const std::string & dom, const std::string & dmc, float_t scale2Int, std::list<Polygon2D<coor_t> > & polygons);

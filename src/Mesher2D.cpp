@@ -221,7 +221,7 @@ void Mesher2D::InitLogger()
     debugSink->SetLevel(log::Level::Debug);
     infoSink->SetLevel(log::Level::Info);
 
-    auto logger = log::MultiSinksLogger("Mesh Log", {traceSink, debugSink, infoSink});
+    auto logger = log::MultiSinksLogger("eMesh", {traceSink, debugSink, infoSink});
     logger->SetLevel(log::Level::Trace);
     log::SetDefaultLogger(logger);
 }

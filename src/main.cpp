@@ -6,6 +6,13 @@
 #include <stdlib.h>
 using namespace generic;
 using namespace emesh;
+struct MeshOptions
+{
+    bool mesh3D;
+    std::string workPath;
+    std::string projName;
+};
+
 bool ParseOptions(int argc, char *argv[], Mesh2DFlowDB & db, std::ostream & os = std::cout)
 {
     using namespace program_options;

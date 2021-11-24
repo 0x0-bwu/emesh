@@ -1,13 +1,13 @@
 #include "Tetrahedralizator.h"
 #include "tetgen/tetgen.h"
 using namespace emesh;
-bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const std::list<Edge> & edges)
+bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const std::list<Edge> & edges, const std::vector<Point> * addin)
 {
     tet.Clear();
 
     size_t index;
     tetgenbehavior b;
-    tetgenio in, addin, out, bgmin;
+    tetgenio in, add, out, bgmin;
 
     b.plc = 1;//-p
     b.convex = 1;//-c
@@ -33,7 +33,7 @@ bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const 
     }
 
     tetgenmesh m;
-    tetrahedralize(&b, &in, &out, &addin, &bgmin, &m);
+    tetrahedralize(&b, &in, &out, &add, &bgmin, &m);
 
     assert(out.firstnumber == 0);
 

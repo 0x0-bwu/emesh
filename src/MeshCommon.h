@@ -14,18 +14,25 @@ using namespace generic::geometry;
 using namespace generic::geometry::tri;
 using generic::common::float_type;
 using coor_t = int64_t;
+using float_t = float_type<coor_t>;
 
 enum class FileFormat { DomDmc, WKT, MSH };
 enum class MeshTask { MeshGeneration, MeshEvaluation };
 
-struct MeshCtrl
+struct MeshCtrl2D
 {
-    using float_t = float_type<coor_t>;
     coor_t tolerance = 0;
     coor_t maxEdgeLen = 0;
     coor_t minEdgeLen = 100;
     float_t scale2Int = 1e3;
     float_t minAlpha = math::Rad(15);
+};
+
+struct MeshCtrl3D
+{
+    coor_t tolerance = 0;
+    coor_t maxEdgeLenH = 0;
+    float_t smartZRatio = 2.0; 
 };
 
 struct StackLayerInfo

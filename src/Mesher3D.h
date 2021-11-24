@@ -15,6 +15,9 @@ struct MeshSketchLayer3D
     MeshSketchLayer3D(const PolygonContainer & p)
      : polygons(p) {}
     
+    MeshSketchLayer3D(const MeshSketchLayer3D & other) = default;
+    MeshSketchLayer3D & operator= (const MeshSketchLayer3D & other) = default;
+
     void SetConstrains(const Segment2DContainer * top, const Segment2DContainer * bot)
     {
         constrains[0] = top;
@@ -24,6 +27,22 @@ struct MeshSketchLayer3D
     void SetTopBotHeight(coor_t tH, coor_t bH)
     {
         topH = tH; botH = bH;
+    }
+
+    coor_t GetHeight() const
+    {
+        return topH - botH;
+    }
+
+    std::pair<MeshSketchLayer3D, MeshSketchLayer3D> Split() const
+    {
+        MeshSketchLayer3D top = *this;
+        MeshSketchLayer3D bot = *this;
+        auto mid = (topH + botH) / 2;
+        top.botH = mid;
+        bot.topH = mid;
+        bot.constrains[0] = constrains[1];//C0-C1 -> C0-C1-C1
+        return std::make_pair(top, bot);
     }
 };
 
@@ -51,7 +70,7 @@ private:
 struct Mesh3DFlowDB
 {
     Mesh3DFlowDB()
-     : meshCtrl(new MeshCtrl)
+     : meshCtrl(new MeshCtrl3D)
     {}
     Mesh3DFlowDB(Mesh3DFlowDB && ) = delete;
     Mesh3DFlowDB(const Mesh3DFlowDB & ) = delete;
@@ -61,16 +80,12 @@ struct Mesh3DFlowDB
     template<typename T>
     using Data = std::unique_ptr<T>;
 
-    Data<MeshTasks>   tasks;
     Data<std::string> workPath;
     Data<std::string> projName;
-    Data<MeshCtrl>    meshCtrl;
-    Data<IndexEdgeList>      edges;
+    Data<MeshCtrl3D>       meshCtrl;
     Data<StackLayerInfos>    sInfos;
     Data<TetrahedronData>    tetras;
-    Data<Point3DContainer>   points;
     Data<StackLayerPolygons> inGoems;
-    Data<MeshSketchLayers3D> meshSktLyrs;
     Data<InterfaceIntersections> intersections;
 };
 
@@ -93,24 +108,25 @@ private:
 class MeshFlow3D
 {
     friend class Mesher3D;
-    using float_t = typename Mesher3D::float_t;
 public:
     static bool LoadGeometryFiles(const std::string & workPath, const std::string & projName, StackLayerPolygons & polygons, StackLayerInfos & infos);
     static bool CleanGeometries(StackLayerPolygons & polygons, coor_t distance);
     static bool ExtractInterfaceIntersections(const StackLayerPolygons & polygons, InterfaceIntersections & intersections);
     static bool ExtractInterfaceIntersection(const PolygonContainer & layer1, const PolygonContainer & layer2, Segment2DContainer & intersection);
     static bool BuildMeshSketchLayers(const StackLayerPolygons & polygons, const InterfaceIntersections & intersections, const StackLayerInfos & infos, MeshSketchLayers3D & meshSktLyrs);
+    static bool SliceOverheightLayers(MeshSketchLayers3D & meshSktLyrs, float_t ratio);
     static bool GenerateTetrahedronsFromSketchLayers(const MeshSketchLayers3D & meshSktLyrs, TetrahedronDataVec & tetVec);
     static bool GenerateTetrahedronsFromSketchLayer(const MeshSketchLayer3D & meshSktLyr, TetrahedronData & tet);
-    static bool ExtractTopology(const MeshSketchLayer3D & meshSktLyr, std::vector<Point3D<coor_t> > & points, std::list<IndexEdge> & edges);
-    static bool ExtractTopology(StackLayerPolygons & polygons, const StackLayerInfos & infos, const InterfaceIntersections & intersections, 
-                                std::vector<Point3D<coor_t> > & points, std::list<IndexEdge> & edges);
-    static bool SplitOverlengthEdges(std::vector<Point3D<coor_t> > & points, std::list<IndexEdge> & edges, coor_t maxLength);
-    static bool WriteNodeAndEdgeFiles(const std::string & filename, const std::vector<Point3D<coor_t> > & points, const std::list<IndexEdge> & edges);
+    static bool ExtractTopology(const MeshSketchLayer3D & meshSktLyr, Point3DContainer & points, std::list<IndexEdge> & edges);
+    static bool SplitOverlengthEdges(Point3DContainer & points, std::list<IndexEdge> & edges, coor_t maxLength, bool surfaceOnly = true);
+    static bool WriteNodeAndEdgeFiles(const std::string & filename, const Point3DContainer & points, const std::list<IndexEdge> & edges);
     static bool LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos);
-    static bool Tetrahedralize(const std::vector<Point3D<coor_t> > & points, const std::list<IndexEdge> & edges, TetrahedronData & tet);
+    static bool Tetrahedralize(const Point3DContainer & points, const std::list<IndexEdge> & edges, const Point3DContainer & addin, TetrahedronData & tet);
     static bool MergeTetrahedrons(TetrahedronData & master, TetrahedronDataVec & tetVec);
     static bool ExportVtkFile(const std::string & filename, const TetrahedronData & tet);
+
+private:
+    static bool SliceOverheightLayers(std::list<MeshSketchLayer3D> & meshSktLyrs, float_t ratio);
 };
 }//namespace emesh
  #endif//EMESH_MESHER3D_H

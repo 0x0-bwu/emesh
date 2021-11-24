@@ -1,0 +1,84 @@
+bool MeshFlow3D::ExtractTopology(StackLayerPolygons & polygons, const std::vector<StackLayerInfo> & infos, const InterfaceIntersections & intersections,
+                                 std::vector<Point3D<coor_t> > & points, std::list<IndexEdge> & edges)
+{
+    points.clear();
+    edges.clear();
+    if(polygons.size() != infos.size()) return false;
+
+    using EdgeSet = topology::UndirectedIndexEdgeSet;
+    using LayerIdxMap = std::unordered_map<coor_t, size_t>;
+    using PointIdxMap = std::unordered_map<Point2D<coor_t>, size_t, PointHash<coor_t> >;
+    using LayerPointIdxMap = std::vector<PointIdxMap>;
+    
+    EdgeSet edgeSet;
+    std::vector<coor_t> heights(infos.size() + 1);
+    LayerPointIdxMap lyrPtIdxMap(infos.size() + 1);
+    size_t lyrIdx = 0;
+    for(const auto & info : infos){
+        heights[lyrIdx] = info.elevation;
+        lyrIdx++;
+    }
+    heights[lyrIdx] = infos.back().elevation - infos.back().thickness;
+
+    auto getIndex = [&lyrPtIdxMap, &heights, &points](const Point2D<coor_t> & p, size_t layer) mutable
+    {
+        auto & ptIdxMap = lyrPtIdxMap[layer];
+        if(!ptIdxMap.count(p)){
+            auto index = points.size();
+            ptIdxMap.insert(std::make_pair(p, index));
+            points.push_back(Point3D<coor_t>(p[0], p[1], heights[layer]));
+        }
+        return ptIdxMap.at(p);
+    };
+
+    lyrIdx = 0;
+    const auto & top = polygons.front();
+    for(const auto & polygon : top){
+        auto size = polygon.Size();
+        for(size_t i = 0; i < size; ++i){
+            size_t j = (i + 1) % size;
+            IndexEdge e(getIndex(polygon[i], lyrIdx), getIndex(polygon[j], lyrIdx));
+            if(edgeSet.count(e)) continue;
+            edgeSet.insert(e);
+            edges.emplace_back(std::move(e)); 
+        }
+    }
+    
+    for(const auto & intersection : intersections){
+        lyrIdx++;
+        for(const auto & segment : intersection){
+            IndexEdge e(getIndex(segment[0], lyrIdx), getIndex(segment[1], lyrIdx));
+            if(edgeSet.count(e)) continue;
+            edgeSet.insert(e);
+            edges.emplace_back(std::move(e));
+        }
+    }
+
+    lyrIdx++;
+    const auto & bot = polygons.back();
+    for(const auto & polygon : bot){
+        auto size = polygon.Size();
+        for(size_t i = 0; i < size; ++i){
+            size_t j = (i + 1) % size;
+            IndexEdge e(getIndex(polygon[i], lyrIdx), getIndex(polygon[j], lyrIdx));
+            if(edgeSet.count(e)) continue;
+            edgeSet.insert(e);
+            edges.emplace_back(std::move(e)); 
+        }
+    }
+
+    lyrIdx = 0;
+    for(const auto & layer : polygons){
+        for(const auto & polygon : layer){
+            size_t size = polygon.Size();
+            for(size_t i = 0; i < size; ++i){
+                IndexEdge e(getIndex(polygon[i], lyrIdx), getIndex(polygon[i], lyrIdx + 1));
+                if(edgeSet.count(e)) continue;
+                edgeSet.insert(e);
+                edges.emplace_back(std::move(e)); 
+            }
+        }
+        lyrIdx++;
+    }
+    return true;
+}

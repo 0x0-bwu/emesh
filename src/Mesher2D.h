@@ -14,7 +14,7 @@ using generic::common::float_type;
 struct Mesh2DFlowDB
 {
     Mesh2DFlowDB()
-     : meshCtrl(new MeshCtrl),
+     : meshCtrl(new MeshCtrl2D),
        inFormat(new FileFormat(FileFormat::DomDmc)),
        outFormat(new FileFormat(FileFormat::MSH))
     {}
@@ -29,7 +29,7 @@ struct Mesh2DFlowDB
     Data<MeshTasks>   tasks;
     Data<std::string> workPath;
     Data<std::string> projName;
-    Data<MeshCtrl>    meshCtrl;
+    Data<MeshCtrl2D>  meshCtrl;
     Data<FileFormat>  inFormat;
     Data<FileFormat>  outFormat;
     Data<IndexEdgeList>      edges;

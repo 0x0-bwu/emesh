@@ -7,7 +7,7 @@
 #include <memory>
 using namespace generic;
 using namespace emesh;
-bool MeshFileUtility::LoadMeshCtrlFile(const std::string & txt, MeshCtrl & ctrl)
+bool MeshFileUtility::LoadMeshCtrlFile(const std::string & txt, MeshCtrl2D & ctrl)
 {
     std::ifstream in(txt);
     if(!in.is_open()) return false;
