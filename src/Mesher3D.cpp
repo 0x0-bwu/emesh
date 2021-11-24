@@ -6,6 +6,7 @@
 #include "generic/geometry/Transform.hpp"
 #include "generic/geometry/Topology.hpp"
 #include "generic/geometry/Utility.hpp"
+#include "generic/tree/QuadTreeUtilityMT.hpp"
 #include "generic/tools/FileSystem.hpp"
 #include "generic/tools/Tools.hpp"
 #include "Tetrahedralizator.h"
@@ -87,11 +88,11 @@ void TetrahedronDataMerger::Merge(const TetrahedronData & data)
 
 Mesher3D::Mesher3D()
 {
-    std::string workPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test" + GENERIC_FOLDER_SEPS + "subgds";
-    std::string projName = "SubGDS_DIE1";
+    // std::string workPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test" + GENERIC_FOLDER_SEPS + "subgds";
+    // std::string projName = "SubGDS_DIE1";
 
-    // std::string workPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test" + GENERIC_FOLDER_SEPS + "fccsp";
-    // std::string projName = "layer";
+    std::string workPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test" + GENERIC_FOLDER_SEPS + "fccsp";
+    std::string projName = "layer";
     
     db.workPath.reset(new std::string(std::move(workPath)));
     db.projName.reset(new std::string(std::move(projName)));
@@ -117,10 +118,13 @@ bool Mesher3D::RunTest()
 {
     //test
     TetrahedronData tet;
-    std::vector<Point3D<coor_t> > points {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}, {0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}};
-    std::list<IndexEdge> edges {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
-    std::vector<Point3D<coor_t> > addin {{0.5, 0.5, 0.5}};
-    return MeshFlow3D::Tetrahedralize(points, edges, addin, tet);
+    std::vector<Point3D<coor_t> > points {{0, 0, 0}, {10, 0, 0}, {10, 10, 0}, {0, 10, 0}, {0, 0, 10}, {10, 0, 10}, {10, 10, 10}, {0, 10, 10} };
+    std::list<IndexEdge> edges {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7} };
+    std::vector<Point3D<coor_t> > addin {{5, 5, 5}};
+    auto res = MeshFlow3D::Tetrahedralize(points, edges, &addin, tet);
+    std::cout << "total nodes: " << tet.vertices.size() << std::endl;
+    std::cout << "total elements: " << tet.tetrahedrons.size() << std::endl;
+    return res;
 }
 
 bool Mesher3D::RunGenerateMesh()
@@ -173,6 +177,10 @@ bool Mesher3D::RunGenerateMesh()
         log::Error("fail to build mesh sketch layers");
         return false;
     }
+
+    //
+    log::Info("start insert grade points to mesh sketch layers...");
+    res = MeshFlow3D::AddPointsFromBalancedQuadTree(*meshSktLyrs, 20);
 
     //
     if(math::GT<float_t>(db.meshCtrl->smartZRatio, 1.0)){
@@ -324,6 +332,23 @@ bool MeshFlow3D::BuildMeshSketchLayers(const StackLayerPolygons & polygons, cons
     return true;
 }
 
+bool MeshFlow3D::AddPointsFromBalancedQuadTree(MeshSketchLayers3D & meshSktLyrs, size_t threshold)
+{
+    bool res = true;
+    for(size_t i = 0; i < meshSktLyrs.size(); ++i)
+        res = res && AddPointsFromBalancedQuadTree(meshSktLyrs[i], threshold);
+    return res;
+}
+
+bool MeshFlow3D::AddPointsFromBalancedQuadTree(MeshSketchLayer3D & meshSktLyr, size_t threshold)
+{
+    for(size_t i = 0; i < 2; ++i){
+        if(meshSktLyr.constrains[i])
+            meshSktLyr.addPoints[i] = AddPointsFromBalancedQuadTree(*(meshSktLyr.constrains[i]), threshold);
+        else meshSktLyr.addPoints[i] = AddPointsFromBalancedQuadTree(meshSktLyr.polygons, threshold);
+    }
+}
+
 bool MeshFlow3D::SliceOverheightLayers(MeshSketchLayers3D & meshSktLyrs, float_t ratio)
 {
     std::list<MeshSketchLayer3D> layers(meshSktLyrs.begin(), meshSktLyrs.end());
@@ -357,8 +382,8 @@ bool MeshFlow3D::GenerateTetrahedronsFromSketchLayer(const MeshSketchLayer3D & m
     coor_t threshold = std::max(bbox.Length(), bbox.Width()) / 10;//wbtest
     if(!SplitOverlengthEdges(*points, *edges, threshold)) return false;
 
-    Point3DContainer addin;
-    if(!Tetrahedralize(*points, *edges, addin, tet)) return false;
+    auto addin = meshSktLyr.GetAdditionalPoints();
+    if(!Tetrahedralize(*points, *edges, addin.get(), tet)) return false;
 
     return true;
 }
@@ -479,10 +504,13 @@ bool MeshFlow3D::LoadLayerStackInfos(const std::string & filename, StackLayerInf
     return MeshFileUtility::LoadLayerStackInfos(filename, infos);
 }
 
-bool MeshFlow3D::Tetrahedralize(const Point3DContainer & points, const std::list<IndexEdge> & edges, const Point3DContainer & addin, TetrahedronData & t)
+bool MeshFlow3D::Tetrahedralize(const Point3DContainer & points, const std::list<IndexEdge> & edges, const Point3DContainer * addin, TetrahedronData & t)
 {
+    if(addin){
+        std::cout << "additional points: " << addin->size() << std::endl;//wbtest
+    }
     Tetrahedralizator tetrahedralizator(t);
-    tetrahedralizator.Tetrahedralize(points, edges, &addin);
+    tetrahedralizator.Tetrahedralize(points, edges, addin);
 }
 
 bool MeshFlow3D::MergeTetrahedrons(TetrahedronData & master, TetrahedronDataVec & tetVec)
@@ -537,4 +565,53 @@ bool MeshFlow3D::SliceOverheightLayers(std::list<MeshSketchLayer3D> & meshSktLyr
         curr++;
     }
     return sliced;
+}
+
+std::unique_ptr<Point2DContainer> MeshFlow3D::AddPointsFromBalancedQuadTree(const Segment2DContainer & segments, size_t threshold)
+{    
+    std::list<Point2D<coor_t> * > objs;
+    for(const auto & segment : segments){
+        objs.push_back(const_cast<Point2D<coor_t> * >(&segment[0]));
+        objs.push_back(const_cast<Point2D<coor_t> * >(&segment[1]));
+    }
+    return AddPointsFromBalancedQuadTree(std::move(objs), threshold);
+}
+
+std::unique_ptr<Point2DContainer> MeshFlow3D::AddPointsFromBalancedQuadTree(const PolygonContainer & polygons, size_t threshold)
+{
+    std::list<Point2D<coor_t> * > objs;
+    for(const auto & polygon : polygons){
+        for(size_t i = 0; i < polygon.Size(); ++i)
+            objs.push_back(const_cast<Point2D<coor_t> * >(&polygon[i]));
+    }
+    return AddPointsFromBalancedQuadTree(std::move(objs), threshold);
+}
+
+std::unique_ptr<Point2DContainer> MeshFlow3D::AddPointsFromBalancedQuadTree(std::list<Point2D<coor_t> * > points, size_t threshold)
+{    
+    Box2D<coor_t> bbox;
+    for(auto * point : points) bbox |= *point;
+    threshold = std::max(size_t(1), threshold);
+
+    using Tree = tree::QuadTree<coor_t, Point2D<coor_t>, PointExtent>;
+    using Node = typename Tree::QuadNode;
+    using TreeBuilder = tree::QuadTreeBuilderMT<Point2D<coor_t>, Tree>;
+    Tree tree(bbox);
+    TreeBuilder builder(tree);
+    builder.Build(points, threshold);
+
+    tree.Balance();
+
+    std::list<Node * > leafNodes;
+    Tree::GetAllLeafNodes(&tree, leafNodes);
+
+    auto addin = std::make_unique<Point2DContainer>();
+    for(auto node : leafNodes){
+        if(node->GetObjs().size() > 0) continue;
+        const auto & box = node->GetBBox();
+        Point2D<coor_t> ct = box.Center().Cast<coor_t>();
+        if(Contains(bbox, ct))
+            addin->emplace_back(std::move(ct));
+    }
+    return addin;
 }

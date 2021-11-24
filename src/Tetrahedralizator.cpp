@@ -11,12 +11,12 @@ bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const 
 
     b.plc = 1;//-p
     b.convex = 1;//-c
-    b.vtkview = 1;//-k
+    // b.vtkview = 1;//-k
 
     in.mesh_dim = 3;
     in.numberofpointattributes = 0;
     in.numberofpoints = points.size();
-    in.pointlist = new double[in.numberofpoints * 3];
+    in.pointlist = new double[in.numberofpoints * in.mesh_dim];
     
     index = 0;
     for(size_t i = 0; i < in.numberofpoints; ++i)
@@ -32,6 +32,24 @@ bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const 
         in.edgelist[index++] = edge.v2();
     }
 
+    if(addin && addin->size()){
+        b.insertaddpoints = 1;//-i
+
+        add.mesh_dim = 3;
+        add.numberofpointattributes= 0;
+        add.numberofpoints = addin->size();
+        add.pointlist = new double[add.numberofpoints * add.mesh_dim];
+
+        index = 0;
+        for(size_t i = 0; i < add.numberofpoints; ++i)
+            for(size_t j = 0; j < add.mesh_dim; ++j)
+                add.pointlist[index++] = (*addin)[i][j];
+    }
+
+    // b.quality = 1;
+    // b.minratio = 20;
+    // b.mindihedral = 10;
+    // b.verbose = std::numeric_limits<int>::max();
     tetgenmesh m;
     tetrahedralize(&b, &in, &out, &add, &bgmin, &m);
 
@@ -55,7 +73,6 @@ bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const 
             tet.vertices[tetrahedron.vertices[j]].tetrahedrons.insert(i);
         }
     }
-
     return true;
 }
 

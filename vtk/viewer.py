@@ -24,8 +24,8 @@ from vtkmodules.vtkRenderingCore import (
 
 def get_filename():
     cwd = os.getcwd()
-    return cwd + '/test/subgds/SubGDS_DIE1.vtk'
-    # return cwd + '/test/fccsp/layer.vtk'
+    # return cwd + '/test/subgds/SubGDS_DIE1.vtk'
+    return cwd + '/test/fccsp/layer.vtk'
 
 
 def main():
