@@ -6,17 +6,17 @@ using namespace emesh;
 
 Mesher3D::Mesher3D()
 {
-
-    // std::string workPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test" + GENERIC_FOLDER_SEPS + "Iluvatar";
+    std::string dataPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "thirdpart" + GENERIC_FOLDER_SEPS + "internal" + GENERIC_FOLDER_SEPS + "testdata";
+    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "Iluvatar";
     // std::string projName = "Iluvatar";
 
-    std::string workPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test" + GENERIC_FOLDER_SEPS + "odb";
+    std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "odb";
     std::string projName = "odb";
 
-    // std::string workPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test" + GENERIC_FOLDER_SEPS + "subgds";
+    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "subgds";
     // std::string projName = "subgds";
   
-    // std::string workPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test" + GENERIC_FOLDER_SEPS + "fccsp";
+    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "fccsp";
     // std::string projName = "fccsp";
     
     db.workPath.reset(new std::string(std::move(workPath)));
