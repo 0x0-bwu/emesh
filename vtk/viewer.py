@@ -24,8 +24,8 @@ from vtkmodules.vtkRenderingCore import (
 
 def get_filename():
     cwd = os.getcwd()
-    # return cwd + '/test/subgds/SubGDS_DIE1.vtk'
-    return cwd + '/test/fccsp/layer.vtk'
+    return cwd + '/test/subgds/SubGDS_DIE1.vtk'
+    # return cwd + '/test/fccsp/layer.vtk'
 
 
 def main():
@@ -51,7 +51,7 @@ def main():
     interactor = vtkRenderWindowInteractor()
     interactor.SetRenderWindow(renderWindow)
 
-    xnorm = [0, -1.0, 0.0]
+    xnorm = [1.0, 1.0, 0.0]
 
     clipPlane = vtkPlane()
     clipPlane.SetOrigin(reader.GetOutput().GetCenter())
@@ -63,8 +63,9 @@ def main():
     clipper.SetValue(0.0)
     clipper.GenerateClippedOutputOn()
     clipper.Update()
-
+    
     clippedMapper = vtkDataSetMapper()
+    # clippedMapper.SetInputData(reader.GetOutput())
     clippedMapper.SetInputData(clipper.GetClippedOutput())
     clippedMapper.ScalarVisibilityOff()
 

@@ -30,9 +30,10 @@ struct MeshCtrl2D
 
 struct MeshCtrl3D
 {
+    size_t threads = 4;
     coor_t tolerance = 100;
     coor_t maxEdgeLenH = 0;
-    float_t smartZRatio = 0; 
+    float_t smartZRatio = 2.5; 
 };
 
 struct StackLayerInfo
