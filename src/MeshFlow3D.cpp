@@ -456,7 +456,7 @@ std::unique_ptr<Point2DContainer> MeshFlow3D::AddPointsFromBalancedQuadTree(std:
     auto condition = [minLen](Node * node)
     {
         auto bbox = node->GetBBox();
-        return node->GetObjs().size() > 0 && std::max(bbox.Length(), bbox.Width()) > minLen; 
+        return node->GetObjs().size() > 0 && std::min(bbox.Length(), bbox.Width()) > minLen; 
     };
 
     Tree::CreateSubNodesIf(&tree, condition);

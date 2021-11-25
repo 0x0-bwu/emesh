@@ -10,11 +10,11 @@ Mesher3D::Mesher3D()
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "Iluvatar";
     // std::string projName = "Iluvatar";
 
-    std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "odb";
-    std::string projName = "odb";
+    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "odb";
+    // std::string projName = "odb";
 
-    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "subgds";
-    // std::string projName = "subgds";
+    std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "subgds";
+    std::string projName = "subgds";
   
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "fccsp";
     // std::string projName = "fccsp";
@@ -115,7 +115,7 @@ bool Mesher3D::RunGenerateMesh()
 
     //
     log::Info("start insert grade points to mesh sketch layers...");
-    res = MeshFlow3D::AddGradePointsForMeshLayers(*meshSktLyrs, 30);
+    res = MeshFlow3D::AddGradePointsForMeshLayers(*meshSktLyrs, 100);
 
     //
     if(math::GT<float_t>(db.meshCtrl->smartZRatio, 1.0)){
