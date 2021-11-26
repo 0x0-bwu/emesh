@@ -19,16 +19,22 @@ public:
     static bool LoadGeometryFiles(const std::string & workPath, const std::string & projName, StackLayerPolygons & polygons, StackLayerInfos & infos);
     static bool CleanGeometries(StackLayerPolygons & polygons, coor_t distance);
     static bool CleanLayerGeometries(PolygonContainer & polygons, coor_t distance);
+    static bool ExtractInterfaceIntersections(StackLayerModel & model);
     static bool ExtractInterfaceIntersections(const StackLayerPolygons & polygons, InterfaceIntersections & intersections);
     static bool ExtractInterfaceIntersection(const PolygonContainer & layer1, const PolygonContainer & layer2, Segment2DContainer & intersection);
+    static bool SplitOverlengthEdges(const StackLayerModel & model, coor_t maxLength);
     static bool SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength);
-    static bool BuildMeshSketchLayers(const StackLayerPolygons & polygons, const InterfaceIntersections & intersections, const StackLayerInfos & infos, MeshSketchLayers3D & meshSktLyrs);
-    static bool AddGradePointsForMeshLayers(MeshSketchLayers3D & meshSktLyrs, size_t threshold);
-    static bool AddGradePointsForMeshLayer(MeshSketchLayer3D & meshSktLyr, size_t threshold);
-    static bool SliceOverheightLayers(MeshSketchLayers3D & meshSktLyrs, float_t ratio);
-    static bool GenerateTetrahedronsFromSketchLayers(const MeshSketchLayers3D & meshSktLyrs, TetrahedronDataVec & tetVec);
-    static bool GenerateTetrahedronsFromSketchLayer(const MeshSketchLayer3D & meshSktLyr, TetrahedronData & tet);
-    static bool ExtractTopology(const MeshSketchLayer3D & meshSktLyr, Point3DContainer & points, std::list<IndexEdge> & edges);
+    static bool BuildMeshSketchModels(StackLayerModel & model, std::vector<MeshSketchModel> & models);
+    static bool BuildMeshSketchModel(const StackLayerPolygons & polygons, const InterfaceIntersections & intersections, const StackLayerInfos & infos, MeshSketchModel & model);
+    static bool AddGradePointsForMeshModels(std::vector<MeshSketchModel> & models, size_t threshold);
+    static bool AddGradePointsForMeshModel(MeshSketchModel & model, size_t threshold);
+    static bool AddGradePointsForMeshLayer(MeshSketchLayer & layer, size_t threshold);
+    static bool SliceOverheightModels(std::vector<MeshSketchModel> & models, float_t ratio);
+    static bool SliceOverheightLayers(MeshSketchModel & model, float_t ratio);
+    static bool GenerateTetrahedronsFromSketchModels(const std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec);
+    static bool GenerateTetrahedronsFromSketchModel(const MeshSketchModel & model, TetrahedronDataVec & tetVec);
+    static bool GenerateTetrahedronsFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet);
+    static bool ExtractTopology(const MeshSketchLayer & layer, Point3DContainer & points, std::list<IndexEdge> & edges);
     static bool SplitOverlengthEdges(Point3DContainer & points, std::list<IndexEdge> & edges, coor_t maxLength, bool surfaceOnly = true);
     static bool WriteNodeAndEdgeFiles(const std::string & filename, const Point3DContainer & points, const std::list<IndexEdge> & edges);
     static bool LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos);
@@ -36,7 +42,7 @@ public:
     static bool MergeTetrahedrons(TetrahedronData & master, TetrahedronDataVec & tetVec);
     static bool ExportVtkFile(const std::string & filename, const TetrahedronData & tet);
 
-    static bool SliceOverheightLayers(std::list<MeshSketchLayer3D> & meshSktLyrs, float_t ratio);
+    static bool SliceOverheightLayers(std::list<MeshSketchLayer> & layers, float_t ratio);
     static void SplitOverlengthIntersections(InterfaceIntersections & intersections, coor_t maxLength);
     static void SplitOverlengthSegments(Segment2DContainer & segments, coor_t maxLength);
     static void SplitOverlengthPolygons(PolygonContainer & polygons, coor_t maxLength);
@@ -45,6 +51,14 @@ public:
     static std::unique_ptr<Point2DContainer> AddPointsFromBalancedQuadTree(const Segment2DContainer & segments, size_t threshold);
     static std::unique_ptr<Point2DContainer> AddPointsFromBalancedQuadTree(const PolygonContainer & polygons, size_t threshold);
     static std::unique_ptr<Point2DContainer> AddPointsFromBalancedQuadTree(std::list<Point2D<coor_t> * > points, size_t threshold);
+};
+
+class MeshFileUtility3D
+{
+public:
+    //3d
+    static bool LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos);
+    static bool ExportVtkFile(const std::string & vtk, const TetrahedronData & t);
 };
 
 }//namespace emesh

@@ -5,11 +5,10 @@
 #include "generic/tools/Log.hpp"
 #include "Mesh3D.h"
 namespace emesh {
-
 struct Mesh3DFlowDB
 {
     Mesh3DFlowDB()
-     : meshCtrl(new MeshCtrl3D)
+     : ctrl(new MeshCtrl3D)
     {}
     Mesh3DFlowDB(Mesh3DFlowDB && ) = delete;
     Mesh3DFlowDB(const Mesh3DFlowDB & ) = delete;
@@ -21,11 +20,9 @@ struct Mesh3DFlowDB
 
     Data<std::string> workPath;
     Data<std::string> projName;
-    Data<MeshCtrl3D>       meshCtrl;
-    Data<StackLayerInfos>    sInfos;
-    Data<TetrahedronData>    tetras;
-    Data<StackLayerPolygons> inGoems;
-    Data<InterfaceIntersections> intersections;
+    Data<MeshCtrl3D>       ctrl;
+    Data<StackLayerModel>  model;
+    Data<TetrahedronData>  tetras;
 };
 
 class Mesher3D

@@ -7,17 +7,22 @@ using namespace emesh;
 Mesher3D::Mesher3D()
 {
     std::string dataPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "thirdpart" + GENERIC_FOLDER_SEPS + "internal" + GENERIC_FOLDER_SEPS + "testdata";
+    
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "Iluvatar";
     // std::string projName = "Iluvatar";
 
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "odb";
     // std::string projName = "odb";
 
-    std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "subgds";
-    std::string projName = "subgds";
+    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "subgds";
+    // std::string projName = "subgds";
   
-    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "fccsp";
-    // std::string projName = "fccsp";
+    std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "fccsp";
+    std::string projName = "fccsp";
+
+    // std::string dataPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test";
+    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "cube";
+    // std::string projName = "cube";
     
     db.workPath.reset(new std::string(std::move(workPath)));
     db.projName.reset(new std::string(std::move(projName)));
@@ -55,13 +60,14 @@ bool Mesher3D::RunTest()
 bool Mesher3D::RunGenerateMesh()
 {
     bool res(true);
-    size_t threads = db.meshCtrl->threads;
+    size_t threads = db.ctrl->threads;
 
     //
     log::Info("start to load geometries from file...");
-    db.sInfos.reset(new StackLayerInfos);
-    db.inGoems.reset(new StackLayerPolygons);
-    res = MeshFlow3D::LoadGeometryFiles(*db.workPath, *db.projName, *db.inGoems, *db.sInfos);
+    db.model.reset(new StackLayerModel);
+    db.model->sInfos.reset(new StackLayerInfos);
+    db.model->inGoems.reset(new StackLayerPolygons);
+    res = MeshFlow3D::LoadGeometryFiles(*db.workPath, *db.projName, *(db.model->inGoems), *(db.model->sInfos));
     if(!res){
         log::Error("fail to load geometries");
         return false;
@@ -69,27 +75,34 @@ bool Mesher3D::RunGenerateMesh()
 
     size_t geomCount = 0;
     geometry::Box2D<coor_t> bbox;
-    for(const auto & geoms : *db.inGoems){
+    for(const auto & geoms : *(db.model->inGoems)){
         geomCount += geoms.size();
         for(const auto & geom : geoms)
             bbox |= geometry::Extent(geom);
     }
     log::Info("total geometries: %1%", geomCount);
+    db.model->bbox = bbox;
 
     //
-    if(db.meshCtrl->tolerance != 0){
-        log::Info("start simplify geometries... , tolerance: %1%", db.meshCtrl->tolerance);
-        res = MeshFlow3DMT::CleanGeometries(*db.inGoems, db.meshCtrl->tolerance, threads);
+    if(db.ctrl->tolerance != 0){
+        log::Info("start simplify geometries... , tolerance: %1%", db.ctrl->tolerance);
+        res = MeshFlow3DMT::CleanGeometries(*(db.model->inGoems), db.ctrl->tolerance, threads);
         if(!res){
             log::Error("fail to simplify geometries, tolerance might be to large");
             return false;
         }
     }
+    
+    //
+    log::Info("start create sub models...");
+    db.model->CreateSubModels();
+    // for(size_t i = 0; i < 4; ++i){
+    //     db.model->subModels[i]->CreateSubModels();
+    // }
 
     //
     log::Info("start extract interface intersections...");
-    db.intersections.reset(new InterfaceIntersections);
-    res = MeshFlow3DMT::ExtractInterfaceIntersections(*db.inGoems, *db.intersections, threads);
+    res = MeshFlow3DMT::ExtractInterfaceIntersections(*db.model, threads);
     if(!res){
         log::Error("fail to extract interface intersections");
         return false;
@@ -98,31 +111,31 @@ bool Mesher3D::RunGenerateMesh()
     //
     coor_t maxLength = std::max(bbox.Length(), bbox.Width()) / 10;
     log::Info("start split overlength edges... , max length: %1%", maxLength);
-    res = MeshFlow3DMT::SplitOverlengthEdges(*db.inGoems, *db.intersections, maxLength, threads);
+    res = MeshFlow3DMT::SplitOverlengthEdges(*db.model, maxLength, threads);
     if(!res){
         log::Error("fail to splitting overlength edges");
         return false;
     }
     
     //
-    log::Info("start build mesh sketch layers...");
-    auto meshSktLyrs = std::make_unique<MeshSketchLayers3D>();
-    res = MeshFlow3D::BuildMeshSketchLayers(*db.inGoems, *db.intersections, *db.sInfos, *meshSktLyrs);
+    log::Info("start build mesh sketch models...");
+    auto models = std::make_unique<std::vector<MeshSketchModel> >();
+    res = MeshFlow3D::BuildMeshSketchModels(*db.model, *models);
     if(!res){
-        log::Error("fail to build mesh sketch layers");
+        log::Error("fail to build mesh sketch models");
         return false;
     }
 
     //
-    log::Info("start insert grade points to mesh sketch layers...");
-    res = MeshFlow3D::AddGradePointsForMeshLayers(*meshSktLyrs, 100);
+    // log::Info("start insert grade points to mesh sketch layers...");
+    // res = MeshFlow3D::AddGradePointsForMeshModels(*models, 100);
 
     //
-    if(math::GT<float_t>(db.meshCtrl->smartZRatio, 1.0)){
-        log::Info("start slice mesh sketch layers... , ratio: %1%", db.meshCtrl->smartZRatio);
-        res = MeshFlow3D::SliceOverheightLayers(*meshSktLyrs, db.meshCtrl->smartZRatio);
+    if(math::GT<float_t>(db.ctrl->smartZRatio, 1.0)){
+        log::Info("start slice mesh sketch models... , ratio: %1%", db.ctrl->smartZRatio);
+        res = MeshFlow3D::SliceOverheightModels(*models, db.ctrl->smartZRatio);
         if(!res){
-            log::Error("fail to slice mesh sketch layers");
+            log::Error("fail to slice mesh sketch models");
             return false;
         }
     }
@@ -130,7 +143,7 @@ bool Mesher3D::RunGenerateMesh()
     //
     log::Info("start generate mesh per sketch layer...");
     auto tetVec = std::make_unique<TetrahedronDataVec>();
-    res = MeshFlow3D::GenerateTetrahedronsFromSketchLayers(*meshSktLyrs, *tetVec);
+    res = MeshFlow3D::GenerateTetrahedronsFromSketchModels(*models, *tetVec);
     if(!res){
         log::Error("fail to generate mesh per sketch layer");
         return false;

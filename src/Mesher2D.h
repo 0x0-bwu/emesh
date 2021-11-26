@@ -74,4 +74,4 @@ public:
     static bool GenerateReport(const std::string & filename, const TriangulationData & triangulation, float_t scale);
 };
 }//namespace emesh
- #endif//EMESHER2D_H
+ #endif//EMESH_MESHER2D_H

@@ -2,46 +2,48 @@
 using namespace generic;
 using namespace emesh;
 
-void MeshSketchLayer3D::SetConstrains(const Segment2DContainer * top, const Segment2DContainer * bot)
+void MeshSketchLayer::SetConstrains(std::shared_ptr<Segment2DContainer> top, std::shared_ptr<Segment2DContainer> bot)
 {
     constrains[0] = top;
     constrains[1] = bot;
 }
 
-void MeshSketchLayer3D::SetTopBotHeight(coor_t tH, coor_t bH)
+void MeshSketchLayer::SetTopBotHeight(coor_t tH, coor_t bH)
 {
-    topH = tH; botH = bH;
+    height[0] = tH;
+    height[1] = bH;
 }
 
-coor_t MeshSketchLayer3D::GetHeight() const
+coor_t MeshSketchLayer::GetHeight() const
 {
-    return topH - botH;
+    return std::abs(height[0] - height[1]);
 }
 
-std::unique_ptr<Point3DContainer> MeshSketchLayer3D::GetAdditionalPoints() const
+std::unique_ptr<Point3DContainer> MeshSketchLayer::GetAdditionalPoints() const
 {
     Point3DContainer points;
     if(addPoints[0]){
         points.reserve(addPoints[0]->size());
         for(const auto & p : *addPoints[0])
-            points.push_back(Point3D<coor_t>(p[0], p[1], topH));
+            points.push_back(Point3D<coor_t>(p[0], p[1], height[0]));
     }
     if(addPoints[1]){
         points.reserve(points.size() + addPoints[1]->size());
         for(const auto & p : *addPoints[1])
-            points.push_back(Point3D<coor_t>(p[0], p[1], botH));
+            points.push_back(Point3D<coor_t>(p[0], p[1], height[1]));
     }
     if(0 == points.size()) return nullptr;
     return std::make_unique<Point3DContainer>(points);   
 }
 
-std::pair<MeshSketchLayer3D, MeshSketchLayer3D> MeshSketchLayer3D::Split() const
+
+std::pair<MeshSketchLayer, MeshSketchLayer> MeshSketchLayer::Slice() const
 {
-    MeshSketchLayer3D top = *this;
-    MeshSketchLayer3D bot = *this;
-    auto mid = (topH + botH) / 2;
-    top.botH = mid;
-    bot.topH = mid;
+    MeshSketchLayer top = *this;
+    MeshSketchLayer bot = *this;
+    auto mid = (height[0] + height[1]) / 2;
+    top.height[1] = mid;
+    bot.height[0] = mid;
     bot.addPoints[0] = addPoints[1];
     bot.constrains[0] = constrains[1];//C0-C1 -> C0-C1-C1
     return std::make_pair(top, bot);

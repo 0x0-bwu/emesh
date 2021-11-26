@@ -17,6 +17,21 @@ bool MeshFlow3DMT::CleanGeometries(StackLayerPolygons & polygons, coor_t distanc
     return res;
 }
 
+bool MeshFlow3DMT::ExtractInterfaceIntersections(StackLayerModel & model, size_t threads)
+{
+    if(model.hasSubModels()){
+        bool res = true;
+        for(size_t i = 0; i < 4; ++i)
+            res = res && ExtractInterfaceIntersections((*model.subModels[i]), threads);
+        return res;
+    }
+    else{
+        if(nullptr == model.inGoems) return false;
+        model.intersections.reset(new InterfaceIntersections);
+        return ExtractInterfaceIntersections(*model.inGoems, *model.intersections, threads);
+    }
+}
+
 bool MeshFlow3DMT::ExtractInterfaceIntersections(const StackLayerPolygons & polygons, InterfaceIntersections & intersections, size_t threads)
 {
     intersections.clear();
@@ -39,6 +54,17 @@ bool MeshFlow3DMT::ExtractInterfaceIntersections(const StackLayerPolygons & poly
     return res;
 }
 
+bool MeshFlow3DMT::SplitOverlengthEdges(const StackLayerModel & model, coor_t maxLength, size_t threads)
+{
+    if(model.hasSubModels()){
+        bool res = true;
+        for(size_t i = 0; i < 4; ++i)
+            res = res && SplitOverlengthEdges((*model.subModels[i]), maxLength, threads);
+        return res;
+    }
+    else return SplitOverlengthEdges(*model.inGoems, *model.intersections, maxLength, threads);
+}
+
 bool MeshFlow3DMT::SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength, size_t threads)
 {
     if(0 == maxLength) return true;
@@ -53,35 +79,35 @@ bool MeshFlow3DMT::SplitOverlengthEdges(StackLayerPolygons & polygons, Interface
     return true;
 }
 
-bool MeshFlow3DMT::AddGradePointsForMeshLayers(MeshSketchLayers3D & meshSktLyrs, size_t threshold, size_t threads)
-{
-    thread::ThreadPool pool(threads);
-    std::vector<std::future<bool> > futures(meshSktLyrs.size());
-    for(size_t i = 0; i < meshSktLyrs.size(); ++i){
-        futures[i] = pool.Submit(std::bind(&MeshFlow3D::AddGradePointsForMeshLayer, std::ref(meshSktLyrs[i]), threshold));
-    }
+// bool MeshFlow3DMT::sAddGradePointsForMeshModel(MeshSketchModel & model, size_t threshold, size_t threads)
+// {
+//     thread::ThreadPool pool(threads);
+//     std::vector<std::future<bool> > futures(model.layers.size());
+//     for(size_t i = 0; i < model.layers.size(); ++i){
+//         futures[i] = pool.Submit(std::bind(&MeshFlow3D::AddGradePointsForMeshLayer, std::ref(model.layers[i]), threshold));
+//     }
 
-    bool res = true;
-    for(size_t i = 0; i < futures.size(); ++i)
-        res = res && futures[i].get();
+//     bool res = true;
+//     for(size_t i = 0; i < futures.size(); ++i)
+//         res = res && futures[i].get();
 
-    return res;
-}
+//     return res;
+// }
 
-bool MeshFlow3DMT::GenerateTetrahedronsFromSketchLayers(const MeshSketchLayers3D & meshSktLyrs, TetrahedronDataVec & tetVec, size_t threads)
-{
-    thread::ThreadPool pool(threads);
+// bool MeshFlow3DMT::GenerateTetrahedronsFromSketchModel(const MeshSketchModel & model, TetrahedronDataVec & tetVec, size_t threads)
+// {
+//     thread::ThreadPool pool(threads);
     
-    tetVec.resize(meshSktLyrs.size());
-    std::vector<std::future<bool> > futures(meshSktLyrs.size());
-    for(size_t i = 0; i < meshSktLyrs.size(); ++i){
-        futures[i] = pool.Submit(std::bind(&MeshFlow3D::GenerateTetrahedronsFromSketchLayer,
-                                 std::ref(meshSktLyrs[i]), std::ref(tetVec[i])));
-    }    
+//     tetVec.resize(model.layers.size());
+//     std::vector<std::future<bool> > futures(model.layers.size());
+//     for(size_t i = 0; i < model.layers.size(); ++i){
+//         futures[i] = pool.Submit(std::bind(&MeshFlow3D::GenerateTetrahedronsFromSketchLayer,
+//                                  std::ref(model.layers[i]), std::ref(tetVec[i])));
+//     }    
 
-    bool res = true;
-    for(size_t i = 0; i < futures.size(); ++i)
-        res = res && futures[i].get();
+//     bool res = true;
+//     for(size_t i = 0; i < futures.size(); ++i)
+//         res = res && futures[i].get();
 
-    return res;
-}
+//     return res;
+// }

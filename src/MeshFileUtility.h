@@ -1,7 +1,6 @@
 #ifndef EMESH_MESHFILEUTILITY_H
 #define EMESH_MESHFILEUTILITY_H
 #include "MeshCommon.h"
-#include "Mesher3D.h"
 #include "Mesher2D.h"
 #include <string>
 namespace emesh {
@@ -19,11 +18,6 @@ public:
     static bool ImportMshFile(const std::string & msh, Triangulation<Point2D<coor_t> > & triangulation, float_t scale2Int);
     static bool ExportMshFile(const std::string & msh, const Triangulation<Point2D<coor_t> > & triangulation, float_t scale);
     static bool ExportReportFile(const std::string & rpt, const Mesher2D::MeshEvaluation & evaluation, float_t scale, bool pureText = false);
-
-    //3d
-    static bool LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos);
-    static bool ExportVtkFile(const std::string & vtk, const TetrahedronData & t);
 };
-
 }//namespace emesh
 #endif//EMESH_MESHFILEUTILITY_H
