@@ -9,6 +9,7 @@ bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const 
     tetgenbehavior b;
     tetgenio in, add, out, bgmin;
 
+    // b.quiet = 1;
     b.plc = 1;//-p
     b.convex = 1;//-c
     // b.vtkview = 1;//-k

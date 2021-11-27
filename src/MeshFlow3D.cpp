@@ -70,30 +70,32 @@ bool MeshFlow3D::ExtractInterfaceIntersections(StackLayerModel & model)
 bool MeshFlow3D::ExtractInterfaceIntersections(const StackLayerPolygons & polygons, InterfaceIntersections & intersections)
 {
     intersections.clear();
-    if(polygons.size() <= 1) return false;
+    if(polygons.size() == 0) return false;
 
-    bool res = true;
-    intersections.resize(polygons.size() - 1);//wbtest, todo: extract top/bot interface intersections
-    for(size_t i = 0; i < polygons.size() -1; ++i){
-        res = res && ExtractInterfaceIntersection(polygons[i], polygons[i + 1], intersections[i]);
+    intersections.resize(polygons.size() + 1);
+    ExtractInterfaceIntersection(polygons.front(), intersections.front());
+    if(polygons.size() > 1) ExtractInterfaceIntersection(polygons.back(), intersections.back());    
+    for(size_t i = 0; i < polygons.size() - 1; ++i){
+        ExtractInterfaceIntersection(polygons[i], polygons[i + 1], intersections[i + 1]);
     }
-    return res;
+    return true;
+}
+
+bool MeshFlow3D::ExtractInterfaceIntersection(const PolygonContainer & layer, Segment2DContainer & intersection)
+{
+    intersection.clear();
+    std::list<Segment2D<coor_t> > temp;
+    Polygons2Segments(layer, temp);
+    boost::polygon::intersect_segments(intersection, temp.begin(), temp.end());
+    return true;
 }
 
 bool MeshFlow3D::ExtractInterfaceIntersection(const PolygonContainer & layer1, const PolygonContainer & layer2, Segment2DContainer & intersection)
 {
     intersection.clear();
     std::list<Segment2D<coor_t> > temp;
-    auto toSegments = [&temp](const Polygon2D<coor_t> & polygon) mutable
-    {
-        size_t size = polygon.Size();
-        for(size_t i = 0; i < size; ++i){
-            size_t j = (i + 1) % size;
-            temp.emplace_back(Segment2D<coor_t>(polygon[i], polygon[j]));
-        }
-    };
-    for(const auto & polygon : layer1) toSegments(polygon);
-    for(const auto & polygon : layer2) toSegments(polygon);
+    Polygons2Segments(layer1, temp);
+    Polygons2Segments(layer2, temp);
     boost::polygon::intersect_segments(intersection, temp.begin(), temp.end());
     return true;
 }
@@ -108,7 +110,6 @@ bool MeshFlow3D::SplitOverlengthEdges(const StackLayerModel & model, coor_t maxL
     }
     else return SplitOverlengthEdges(*model.inGoems, *model.intersections, maxLength); 
 }
-
 
 bool MeshFlow3D::SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength)
 {
@@ -135,7 +136,7 @@ bool MeshFlow3D::BuildMeshSketchModels(StackLayerModel & model, std::vector<Mesh
 
 bool MeshFlow3D::BuildMeshSketchModel(const StackLayerPolygons & polygons, const InterfaceIntersections & intersections, const StackLayerInfos & infos, MeshSketchModel & model)
 {
-    if(polygons.size() != (intersections.size() + 1)) return false;
+    if((polygons.size() + 1) != intersections.size()) return false;
     if(polygons.size() != infos.size()) return false;
 
     //wbtest, fix the copy issue
@@ -151,13 +152,11 @@ bool MeshFlow3D::BuildMeshSketchModel(const StackLayerPolygons & polygons, const
     model.layers.clear();
     for(size_t i = 0; i < polygons.size(); ++i){
         MeshSketchLayer layer;
-        layer.bbox = model.bbox;
         layer.SetTopBotHeight(infos[i].elevation, infos[i].elevation - infos[i].thickness);
         layer.polygons = layerPolygons[i];
-        if(i == 0) layer.SetConstrains(nullptr, layerSegments[i]);
-        else if(i == (polygons.size() - 1)) layer.SetConstrains(layerSegments[i - 1], nullptr);
-        else layer.SetConstrains(layerSegments[i - 1], layerSegments[i]);
+        layer.SetConstrains(layerSegments[i], layerSegments[i + 1]);
         model.layers.emplace_back(std::move(layer));
+        GENERIC_ASSERT(layer.GetHeight() > 0)
     }
     return true;
 }
@@ -228,8 +227,10 @@ bool MeshFlow3D::GenerateTetrahedronsFromSketchModels(const std::vector<MeshSket
 
 bool MeshFlow3D::GenerateTetrahedronsFromSketchModel(const MeshSketchModel & model, TetrahedronDataVec & tetVec)
 {
+    bool res = true;
     for(size_t i = 0; i < model.layers.size(); ++i)
-        GenerateTetrahedronsFromSketchLayer(model.layers[i], tetVec[i]);
+        res = res && GenerateTetrahedronsFromSketchLayer(model.layers[i], tetVec[i]);
+    return res;
 }
 
 bool MeshFlow3D::GenerateTetrahedronsFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet)
@@ -288,14 +289,15 @@ bool MeshFlow3D::ExtractTopology(const MeshSketchLayer & layer, Point3DContainer
             }
         }
         else{
-            for(const auto & polygon : *layer.polygons){
-                size_t size = polygon.Size();
-                 for(size_t j = 0; j < size; ++j){
-                    size_t k = (j + 1) % size;
-                    IndexEdge e(getIndex(polygon[j], i), getIndex(polygon[k], i));
-                    addEdge(std::move(e));
-                }
-            } 
+            // for(const auto & polygon : *layer.polygons){
+            //     size_t size = polygon.Size();
+            //      for(size_t j = 0; j < size; ++j){
+            //         size_t k = (j + 1) % size;
+            //         IndexEdge e(getIndex(polygon[j], i), getIndex(polygon[k], i));
+            //         addEdge(std::move(e));
+            //     }
+            // }
+            assert(false);//wbtest 
         }
     }
 
@@ -308,21 +310,21 @@ bool MeshFlow3D::ExtractTopology(const MeshSketchLayer & layer, Point3DContainer
     }
 
     //boundary
-    std::vector<Point2D<coor_t> > outline(4);
-    outline[0] = layer.bbox[0];
-    outline[1] = Point2D<coor_t>(layer.bbox[1][0], layer.bbox[0][1]);
-    outline[2] = layer.bbox[1];
-    outline[3] = Point2D<coor_t>(layer.bbox[0][0], layer.bbox[1][1]);
+    // std::vector<Point2D<coor_t> > outline(4);
+    // outline[0] = layer.bbox[0];
+    // outline[1] = Point2D<coor_t>(layer.bbox[1][0], layer.bbox[0][1]);
+    // outline[2] = layer.bbox[1];
+    // outline[3] = Point2D<coor_t>(layer.bbox[0][0], layer.bbox[1][1]);
 
-    for(size_t i = 0; i < 4; ++i){
-        size_t j = (i + 1) % 4;
-        IndexEdge top(getIndex(outline[i], 0), getIndex(outline[j], 0));
-        IndexEdge bot(getIndex(outline[i], 1), getIndex(outline[j], 1));
-        IndexEdge side(getIndex(outline[i], 0), getIndex(outline[i], 1));
-        addEdge(std::move(top));
-        addEdge(std::move(bot));
-        addEdge(std::move(side));
-    }
+    // for(size_t i = 0; i < 4; ++i){
+    //     size_t j = (i + 1) % 4;
+    //     IndexEdge top(getIndex(outline[i], 0), getIndex(outline[j], 0));
+    //     IndexEdge bot(getIndex(outline[i], 1), getIndex(outline[j], 1));
+    //     IndexEdge side(getIndex(outline[i], 0), getIndex(outline[i], 1));
+    //     addEdge(std::move(top));
+    //     addEdge(std::move(bot));
+    //     addEdge(std::move(side));
+    // }
     return true;
 }
 
@@ -519,6 +521,19 @@ void MeshFlow3D::SplitOverlengthPolygon(Polygon2D<coor_t> & polygon, coor_t maxL
     polygon.Insert(polygon.End(), points.begin(), points.end());
 }
 
+void MeshFlow3D::Polygons2Segments(const PolygonContainer & polygons, std::list<Segment2D<coor_t> > & segments)
+{
+    for(const auto & polygon : polygons){
+        size_t size = polygon.Size();
+        size_t end = polygon.ConstFront() == polygon.ConstBack() ? size - 1 : size;
+        for(size_t i = 0; i < end; ++i){
+            size_t j = (i + 1) % size;
+            segments.emplace_back(Segment2D<coor_t>(polygon[i], polygon[j]));
+        }
+    }
+}
+
+
 std::unique_ptr<Point2DContainer> MeshFlow3D::AddPointsFromBalancedQuadTree(const Segment2DContainer & segments, size_t threshold)
 {    
     std::list<Point2D<coor_t> * > objs;
@@ -617,6 +632,12 @@ bool MeshFileUtility3D::LoadLayerStackInfos(const std::string & filename, StackL
         infos.back().thickness = thickness;
     }
     in.close();
+    if(infos.size() > 1){
+        for(size_t i = 0; i < infos.size() - 1; ++i){
+            infos[i].thickness = infos[i].elevation - infos[i + 1].elevation;
+            if(infos[i].thickness <= 0) return false;
+        }
+    }
     return infos.size() == layers;
 }
 

@@ -7,13 +7,25 @@ cwd = os.getcwd()
 main_env = Environment()
 
 main_env.Append(CXXFLAGS=[
-    "-g",
     "-Wall",
     "-w",
     "-Wl,-rpath,\$$ORIGIN",
     "-std=c++17",
     "-lpthread"
 ])
+
+debug_mode = True
+if debug_mode :
+    main_env.Append(CXXFLAGS=[
+        "-g",
+        "-O0"
+    ])
+else :
+    main_env.Append(CXXFLAGS=[
+        "-s",
+        "-O0",
+        "-DNDEBUG"
+    ])
 
 # Include dirs
 main_env.Append(CPPPATH=[

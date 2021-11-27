@@ -8,8 +8,8 @@ Mesher3D::Mesher3D()
 {
     std::string dataPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "thirdpart" + GENERIC_FOLDER_SEPS + "internal" + GENERIC_FOLDER_SEPS + "testdata";
     
-    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "Iluvatar";
-    // std::string projName = "Iluvatar";
+    std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "Iluvatar";
+    std::string projName = "Iluvatar";
 
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "odb";
     // std::string projName = "odb";
@@ -17,10 +17,10 @@ Mesher3D::Mesher3D()
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "subgds";
     // std::string projName = "subgds";
   
-    std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "fccsp";
-    std::string projName = "fccsp";
+    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "fccsp";
+    // std::string projName = "fccsp";
 
-    // std::string dataPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test";
+    // dataPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test";
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "cube";
     // std::string projName = "cube";
     
@@ -94,28 +94,26 @@ bool Mesher3D::RunGenerateMesh()
     }
     
     //
-    log::Info("start create sub models...");
-    db.model->CreateSubModels();
-    // for(size_t i = 0; i < 4; ++i){
-    //     db.model->subModels[i]->CreateSubModels();
-    // }
+    size_t level = 3;
+    log::Info("start create sub models..., level=%1%", level);
+    StackLayerModel::CreateSubModels(db.model.get(), level);
 
     //
     log::Info("start extract interface intersections...");
-    res = MeshFlow3DMT::ExtractInterfaceIntersections(*db.model, threads);
+    res = MeshFlow3D::ExtractInterfaceIntersections(*db.model);
     if(!res){
         log::Error("fail to extract interface intersections");
         return false;
     }
 
     //
-    coor_t maxLength = std::max(bbox.Length(), bbox.Width()) / 10;
-    log::Info("start split overlength edges... , max length: %1%", maxLength);
-    res = MeshFlow3DMT::SplitOverlengthEdges(*db.model, maxLength, threads);
-    if(!res){
-        log::Error("fail to splitting overlength edges");
-        return false;
-    }
+    // coor_t maxLength = std::max(bbox.Length(), bbox.Width()) / 10;
+    // log::Info("start split overlength edges... , max length: %1%", maxLength);
+    // res = MeshFlow3DMT::SplitOverlengthEdges(*db.model, maxLength, threads);
+    // if(!res){
+    //     log::Error("fail to splitting overlength edges");
+    //     return false;
+    // }
     
     //
     log::Info("start build mesh sketch models...");
@@ -125,6 +123,7 @@ bool Mesher3D::RunGenerateMesh()
         log::Error("fail to build mesh sketch models");
         return false;
     }
+    log::Info("total mesh sketch models: %1%", models->size());
 
     //
     // log::Info("start insert grade points to mesh sketch layers...");

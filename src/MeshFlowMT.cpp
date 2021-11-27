@@ -17,42 +17,42 @@ bool MeshFlow3DMT::CleanGeometries(StackLayerPolygons & polygons, coor_t distanc
     return res;
 }
 
-bool MeshFlow3DMT::ExtractInterfaceIntersections(StackLayerModel & model, size_t threads)
-{
-    if(model.hasSubModels()){
-        bool res = true;
-        for(size_t i = 0; i < 4; ++i)
-            res = res && ExtractInterfaceIntersections((*model.subModels[i]), threads);
-        return res;
-    }
-    else{
-        if(nullptr == model.inGoems) return false;
-        model.intersections.reset(new InterfaceIntersections);
-        return ExtractInterfaceIntersections(*model.inGoems, *model.intersections, threads);
-    }
-}
+// bool MeshFlow3DMT::ExtractInterfaceIntersections(StackLayerModel & model, size_t threads)
+// {
+//     if(model.hasSubModels()){
+//         bool res = true;
+//         for(size_t i = 0; i < 4; ++i)
+//             res = res && ExtractInterfaceIntersections((*model.subModels[i]), threads);
+//         return res;
+//     }
+//     else{
+//         if(nullptr == model.inGoems) return false;
+//         model.intersections.reset(new InterfaceIntersections);
+//         return ExtractInterfaceIntersections(*model.inGoems, *model.intersections, threads);
+//     }
+// }
 
-bool MeshFlow3DMT::ExtractInterfaceIntersections(const StackLayerPolygons & polygons, InterfaceIntersections & intersections, size_t threads)
-{
-    intersections.clear();
-    if(polygons.size() <= 1) return false;
+// bool MeshFlow3DMT::ExtractInterfaceIntersections(const StackLayerPolygons & polygons, InterfaceIntersections & intersections, size_t threads)
+// {
+//     intersections.clear();
+//     if(polygons.size() <= 1) return false;
 
-    auto size = polygons.size() - 1;
-    intersections.resize(size);
+//     auto size = polygons.size() - 1;
+//     intersections.resize(size);
 
-    thread::ThreadPool pool(threads);
-    std::vector<std::future<bool> > futures(size);
-    for(size_t i = 0; i < size; ++i){
-        futures[i] = pool.Submit(std::bind(&MeshFlow3D::ExtractInterfaceIntersection,
-                                 std::ref(polygons[i]), std::ref(polygons[i + 1]), std::ref(intersections[i])));        
-    }      
+//     thread::ThreadPool pool(threads);
+//     std::vector<std::future<bool> > futures(size);
+//     for(size_t i = 0; i < size; ++i){
+//         futures[i] = pool.Submit(std::bind(&MeshFlow3D::ExtractInterfaceIntersection,
+//                                  std::ref(polygons[i]), std::ref(polygons[i + 1]), std::ref(intersections[i])));        
+//     }      
     
-    bool res = true;
-    for(size_t i = 0; i < futures.size(); ++i)
-        res = res && futures[i].get();
+//     bool res = true;
+//     for(size_t i = 0; i < futures.size(); ++i)
+//         res = res && futures[i].get();
 
-    return res;
-}
+//     return res;
+// }
 
 bool MeshFlow3DMT::SplitOverlengthEdges(const StackLayerModel & model, coor_t maxLength, size_t threads)
 {

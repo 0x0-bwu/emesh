@@ -21,6 +21,7 @@ public:
     static bool CleanLayerGeometries(PolygonContainer & polygons, coor_t distance);
     static bool ExtractInterfaceIntersections(StackLayerModel & model);
     static bool ExtractInterfaceIntersections(const StackLayerPolygons & polygons, InterfaceIntersections & intersections);
+    static bool ExtractInterfaceIntersection(const PolygonContainer & layer, Segment2DContainer & intersection);
     static bool ExtractInterfaceIntersection(const PolygonContainer & layer1, const PolygonContainer & layer2, Segment2DContainer & intersection);
     static bool SplitOverlengthEdges(const StackLayerModel & model, coor_t maxLength);
     static bool SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength);
@@ -48,6 +49,7 @@ public:
     static void SplitOverlengthPolygons(PolygonContainer & polygons, coor_t maxLength);
     static void SplitOverlengthPolygon(Polygon2D<coor_t> & polygon, coor_t maxLength);
     static void SplitOverlengthEdges(Point2DContainer & points, std::list<IndexEdge> & edges, coor_t maxLength);
+    static void Polygons2Segments(const PolygonContainer & layer, std::list<Segment2D<coor_t> > & segments);
     static std::unique_ptr<Point2DContainer> AddPointsFromBalancedQuadTree(const Segment2DContainer & segments, size_t threshold);
     static std::unique_ptr<Point2DContainer> AddPointsFromBalancedQuadTree(const PolygonContainer & polygons, size_t threshold);
     static std::unique_ptr<Point2DContainer> AddPointsFromBalancedQuadTree(std::list<Point2D<coor_t> * > points, size_t threshold);

@@ -11,7 +11,6 @@ namespace emesh {
 class MeshSketchLayer
 {
 public:
-    Box2D<coor_t> bbox;
     coor_t height[2] = {0, 0};//0 - top, 1 - bot
     std::shared_ptr<PolygonContainer> polygons = nullptr;
     std::shared_ptr<Segment2DContainer> constrains[2] = { nullptr, nullptr };
@@ -60,6 +59,17 @@ public:
         else subModels.push_back(model);
     }
 
+    inline static void CreateSubModels(StackLayerModel * model, size_t depth)
+    {
+        while(depth > 0){
+            std::vector<StackLayerModel *> subModels;
+            GetAllLeafModels(model, subModels);
+            for(auto * subModel : subModels)
+                subModel->CreateSubModels();
+            depth--;
+        }
+    }
+
     bool hasSubModels() const { return subModels[0] != nullptr; }
 
     void CreateSubModels()
@@ -78,6 +88,9 @@ public:
             }
 
             for(size_t i = 0; i < inGoems->size(); ++i){
+                for(size_t j = 0; j < 4; ++j){
+                    subModels[j]->inGoems->at(i).emplace_back(toPolygon(subBoxes[j]));
+                }//boundary
                 auto & polygons = inGoems->at(i);
                 while(!polygons.empty()){
                     bool contains = false;
@@ -94,7 +107,6 @@ public:
                             std::list<Polygon2D<coor_t> > results;
                             boolean::Intersect(polygon, subBoxes[j], results);
                             for(auto & result : results){
-                                GENERIC_ASSERT(Contains(subBoxes[j], Extent(result), true))
                                 subModels[j]->inGoems->at(i).emplace_back(std::move(result));
                             }
                         }
