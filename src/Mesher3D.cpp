@@ -94,7 +94,7 @@ bool Mesher3D::RunGenerateMesh()
     }
     
     //
-    size_t level = 3;
+    size_t level = 2;
     log::Info("start create sub models..., level=%1%", level);
     StackLayerModel::CreateSubModels(db.model.get(), level);
 
@@ -147,6 +147,7 @@ bool Mesher3D::RunGenerateMesh()
         log::Error("fail to generate mesh per sketch layer");
         return false;
     }
+    db.model.reset();
 
     log::Info("start write layer mesh result files...");
     for(size_t i = 0; i < tetVec->size(); ++i){
