@@ -52,12 +52,19 @@ bool MeshFlow3D::CleanLayerGeometries(PolygonContainer & polygons, coor_t distan
     return true;
 }
 
-bool MeshFlow3D::ExtractInterfaceIntersections(StackLayerModel & model)
+bool MeshFlow3D::ExtractModelsIntersections(std::vector<StackLayerModel * > & models)
+{
+    for(size_t i = 0; i < models.size(); ++i)
+        ExtractModelIntersections(*(models[i]));
+    return true;
+}
+
+bool MeshFlow3D::ExtractModelIntersections(StackLayerModel & model)
 {
     if(model.hasSubModels()){
         bool res = true;
         for(size_t i = 0; i < 4; ++i)
-            res = res && ExtractInterfaceIntersections((*model.subModels[i]));
+            res = res && ExtractModelIntersections((*model.subModels[i]));
         return res;
     }
     else{
@@ -197,43 +204,38 @@ bool MeshFlow3D::SliceOverheightLayers(MeshSketchModel & model, float_t ratio)
     return true;
 }
 
-bool MeshFlow3D::GenerateTetrahedronsFromSketchModels(const std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec)
+bool MeshFlow3D::GenerateTetrahedronVecFromSketchModels(std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec)
 {
-    tetVec.clear();
     auto size = models.size();
-    size_t layers = models.front().layers.size();
-    if(0 == models.size()) return false;
-    else if(1 == models.size()){
-        tetVec.resize(layers);
-        return GenerateTetrahedronsFromSketchModel(models.front(), tetVec);
+    tetVec.resize(size);
+    for(size_t i = 0; i < size; ++i){
+        GenerateTetrahedronDataFromSketchModel(models[i], tetVec[i]);
+        std::cout << "remain models : " << size - i - 1 << "/" << size << std::endl;//wbtest
+        models[i].layers.clear();
     }
-    else {
-        auto tetVecs = std::make_unique<std::vector<TetrahedronDataVec> >(size, TetrahedronDataVec(layers));
-        for(size_t i = 0; i < size; ++i){
-            GenerateTetrahedronsFromSketchModel(models[i], (*tetVecs)[i]);
-        }
-        tetVec.clear();
-        for(size_t i = 0; i < layers; ++i){
-            TetrahedronDataVec temp;
-            for(size_t j = 1; j < size; ++j){
-                temp.emplace_back(std::move((*tetVecs)[j][i]));
-            }
-            MergeTetrahedrons((*tetVecs)[0][i], temp);
-            tetVec.emplace_back(std::move((*tetVecs)[0][i]));
-        }
-        return true;   
-    }
+    return true;   
 }
 
-bool MeshFlow3D::GenerateTetrahedronsFromSketchModel(const MeshSketchModel & model, TetrahedronDataVec & tetVec)
+bool MeshFlow3D::GenerateTetrahedronVecFromSketchModel(MeshSketchModel & model, TetrahedronDataVec & tetVec)
 {
     bool res = true;
-    for(size_t i = 0; i < model.layers.size(); ++i)
-        res = res && GenerateTetrahedronsFromSketchLayer(model.layers[i], tetVec[i]);
+    size_t size = model.layers.size();
+    for(size_t i = 0; i < size; ++i){
+        res = res && GenerateTetrahedronDataFromSketchLayer(model.layers[i], tetVec[i]);
+        std::cout << "remain layers: " << size - i - 1 << "/" << size << std::endl;//wbtest
+    }
     return res;
 }
 
-bool MeshFlow3D::GenerateTetrahedronsFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet)
+bool MeshFlow3D::GenerateTetrahedronDataFromSketchModel(MeshSketchModel & model, TetrahedronData & tet)
+{
+    TetrahedronDataVec tetVec(model.layers.size());
+    GenerateTetrahedronVecFromSketchModel(model, tetVec);
+    MergeTetrahedrons(tet, tetVec);
+    return true;
+}
+
+bool MeshFlow3D::GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet)
 {
     auto edges = std::make_unique<std::list<IndexEdge> >();
     auto points = std::make_unique<std::vector<Point3D<coor_t> > >();

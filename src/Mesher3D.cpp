@@ -8,8 +8,8 @@ Mesher3D::Mesher3D()
 {
     std::string dataPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "thirdpart" + GENERIC_FOLDER_SEPS + "internal" + GENERIC_FOLDER_SEPS + "testdata";
     
-    std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "Iluvatar";
-    std::string projName = "Iluvatar";
+    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "Iluvatar";
+    // std::string projName = "Iluvatar";
 
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "odb";
     // std::string projName = "odb";
@@ -17,8 +17,8 @@ Mesher3D::Mesher3D()
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "subgds";
     // std::string projName = "subgds";
   
-    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "fccsp";
-    // std::string projName = "fccsp";
+    std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "fccsp";
+    std::string projName = "fccsp";
 
     // dataPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test";
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "cube";
@@ -98,11 +98,13 @@ bool Mesher3D::RunGenerateMesh()
     log::Info("start create sub models..., level=%1%", level);
     StackLayerModel::CreateSubModels(db.model.get(), level);
 
+    std::vector<StackLayerModel *> subModels;
+    StackLayerModel::GetAllLeafModels(db.model.get(), subModels);
     //
-    log::Info("start extract interface intersections...");
-    res = MeshFlow3D::ExtractInterfaceIntersections(*db.model);
+    log::Info("start extract models intersections...");
+    res = MeshFlow3DMT::ExtractModelsIntersections(subModels, threads);
     if(!res){
-        log::Error("fail to extract interface intersections");
+        log::Error("fail to extract models intersections");
         return false;
     }
 
@@ -142,7 +144,7 @@ bool Mesher3D::RunGenerateMesh()
     //
     log::Info("start generate mesh per sketch layer...");
     auto tetVec = std::make_unique<TetrahedronDataVec>();
-    res = MeshFlow3D::GenerateTetrahedronsFromSketchModels(*models, *tetVec);
+    res = MeshFlow3DMT::GenerateTetrahedronVecFromSketchModels(*models, *tetVec, threads);
     if(!res){
         log::Error("fail to generate mesh per sketch layer");
         return false;

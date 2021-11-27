@@ -19,7 +19,8 @@ public:
     static bool LoadGeometryFiles(const std::string & workPath, const std::string & projName, StackLayerPolygons & polygons, StackLayerInfos & infos);
     static bool CleanGeometries(StackLayerPolygons & polygons, coor_t distance);
     static bool CleanLayerGeometries(PolygonContainer & polygons, coor_t distance);
-    static bool ExtractInterfaceIntersections(StackLayerModel & model);
+    static bool ExtractModelsIntersections(std::vector<StackLayerModel * > & models);
+    static bool ExtractModelIntersections(StackLayerModel & model);
     static bool ExtractInterfaceIntersections(const StackLayerPolygons & polygons, InterfaceIntersections & intersections);
     static bool ExtractInterfaceIntersection(const PolygonContainer & layer, Segment2DContainer & intersection);
     static bool ExtractInterfaceIntersection(const PolygonContainer & layer1, const PolygonContainer & layer2, Segment2DContainer & intersection);
@@ -32,9 +33,10 @@ public:
     static bool AddGradePointsForMeshLayer(MeshSketchLayer & layer, size_t threshold);
     static bool SliceOverheightModels(std::vector<MeshSketchModel> & models, float_t ratio);
     static bool SliceOverheightLayers(MeshSketchModel & model, float_t ratio);
-    static bool GenerateTetrahedronsFromSketchModels(const std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec);
-    static bool GenerateTetrahedronsFromSketchModel(const MeshSketchModel & model, TetrahedronDataVec & tetVec);
-    static bool GenerateTetrahedronsFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet);
+    static bool GenerateTetrahedronVecFromSketchModels(std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec);
+    static bool GenerateTetrahedronVecFromSketchModel(MeshSketchModel & model, TetrahedronDataVec & tetVec);
+    static bool GenerateTetrahedronDataFromSketchModel(MeshSketchModel & model, TetrahedronData & tet);
+    static bool GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet);
     static bool ExtractTopology(const MeshSketchLayer & layer, Point3DContainer & points, std::list<IndexEdge> & edges);
     static bool SplitOverlengthEdges(Point3DContainer & points, std::list<IndexEdge> & edges, coor_t maxLength, bool surfaceOnly = true);
     static bool WriteNodeAndEdgeFiles(const std::string & filename, const Point3DContainer & points, const std::list<IndexEdge> & edges);

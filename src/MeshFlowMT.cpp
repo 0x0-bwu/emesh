@@ -6,15 +6,18 @@ using namespace emesh;
 bool MeshFlow3DMT::CleanGeometries(StackLayerPolygons & polygons, coor_t distance, size_t threads)
 {
     thread::ThreadPool pool(threads);
-    std::vector<std::future<bool> > futures(polygons.size());
     for(size_t i = 0; i < polygons.size(); ++i)
-        futures[i] = pool.Submit(std::bind(&MeshFlow3D::CleanLayerGeometries, std::ref(polygons[i]), distance));        
+        pool.Submit(std::bind(&MeshFlow3D::CleanLayerGeometries, std::ref(polygons[i]), distance));        
     
-    bool res = true;
-    for(size_t i = 0; i < futures.size(); ++i)
-        res = res && futures[i].get();
+    return true;
+}
 
-    return res;
+bool MeshFlow3DMT::ExtractModelsIntersections(std::vector<StackLayerModel * > & models, size_t threads)
+{
+    thread::ThreadPool pool(threads);
+    for(size_t i = 0; i < models.size(); ++i)
+        pool.Submit(std::bind(&MeshFlow3D::ExtractModelIntersections, std::ref(*(models[i]))));
+    return true;
 }
 
 // bool MeshFlow3DMT::ExtractInterfaceIntersections(StackLayerModel & model, size_t threads)
@@ -79,7 +82,19 @@ bool MeshFlow3DMT::SplitOverlengthEdges(StackLayerPolygons & polygons, Interface
     return true;
 }
 
-// bool MeshFlow3DMT::sAddGradePointsForMeshModel(MeshSketchModel & model, size_t threshold, size_t threads)
+bool MeshFlow3DMT::GenerateTetrahedronVecFromSketchModels(std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec, size_t threads)
+{
+    auto size = models.size();
+    tetVec.resize(size);
+    thread::ThreadPool pool(threads);
+    for(size_t i = 0; i < size; ++i)
+        pool.Submit(std::bind(&MeshFlow3D::GenerateTetrahedronDataFromSketchModel, std::ref(models[i]), std::ref(tetVec[i])));        
+    
+    return true;
+}
+
+
+// bool MeshFlow3DMT::AddGradePointsForMeshModel(MeshSketchModel & model, size_t threshold, size_t threads)
 // {
 //     thread::ThreadPool pool(threads);
 //     std::vector<std::future<bool> > futures(model.layers.size());
