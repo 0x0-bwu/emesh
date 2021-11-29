@@ -14,7 +14,7 @@ main_env.Append(CXXFLAGS=[
     "-lpthread"
 ])
 
-debug_mode = True
+debug_mode = False
 if debug_mode :
     main_env.Append(CXXFLAGS=[
         "-g",

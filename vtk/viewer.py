@@ -22,14 +22,16 @@ from vtkmodules.vtkRenderingCore import (
 )
 
 
-def get_filename():
+def get_filename(case, layer):
     cwd = os.getcwd()
     path = cwd + '/thirdpart/internal/testdata/'
-    name = 'fccsp'
-    return path + name + '/' + name + '.vtk'
+    if layer == 0 :
+        return path + case + '/' + case + '.vtk'
+    else :
+        return path + case + '/' + case + '_' + str(layer) + '.vtk'
 
 def main():
-    filename = get_filename()
+    filename = get_filename("subgds", 0)
 
     # Create the reader for the data.
     reader = vtkUnstructuredGridReader()
@@ -50,35 +52,23 @@ def main():
 
     interactor = vtkRenderWindowInteractor()
     interactor.SetRenderWindow(renderWindow)
-
-    xnorm = [1.0, 1.0, 0.0]
-
-    clipPlane = vtkPlane()
-    clipPlane.SetOrigin(reader.GetOutput().GetCenter())
-    clipPlane.SetNormal(xnorm)
-
-    clipper = vtkTableBasedClipDataSet()
-    clipper.SetClipFunction(clipPlane)
-    clipper.SetInputData(reader.GetOutput())
-    clipper.SetValue(0.0)
-    clipper.GenerateClippedOutputOn()
-    clipper.Update()
     
-    clippedMapper = vtkDataSetMapper()
-    # clippedMapper.SetInputData(reader.GetOutput())
-    clippedMapper.SetInputData(clipper.GetClippedOutput())
-    clippedMapper.ScalarVisibilityOff()
+    dataSetMapper = vtkDataSetMapper()
+    dataSetMapper.SetInputData(reader.GetOutput())
+    dataSetMapper.ScalarVisibilityOff()
 
-    clippedActor = vtkActor()
-    clippedActor.SetMapper(clippedMapper)
-    clippedActor.GetProperty().SetDiffuseColor(colors.GetColor3d('tomato'))
-    clippedActor.GetProperty().EdgeVisibilityOn()
+    actor = vtkActor()
+    actor.SetMapper(dataSetMapper)
+    actor.GetProperty().SetDiffuseColor(colors.GetColor3d('tomato'))
+    actor.GetProperty().EdgeVisibilityOn()
+    actor.GetProperty().SetLineWidth(0.2)
+    # clippedActor.SetScale(1.0, 1.0, 50)
 
-    clippedTransform = vtkTransform()
-    clippedTransform.Translate(-center[0], -center[1], -center[2])
-    clippedActor.SetUserTransform(clippedTransform)
+    trans = vtkTransform()
+    trans.Translate(-center[0], -center[1], -center[2])
+    actor.SetUserTransform(trans)
 
-    renderer.AddViewProp(clippedActor)
+    renderer.AddViewProp(actor)
 
     renderer.ResetCamera()
     renderer.GetActiveCamera().Dolly(1.4)

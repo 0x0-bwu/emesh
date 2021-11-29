@@ -52,7 +52,14 @@ bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const 
     // b.mindihedral = 10;
     // b.verbose = std::numeric_limits<int>::max();
     tetgenmesh m;
-    tetrahedralize(&b, &in, &out, &add, &bgmin, &m);
+
+    try {
+        tetrahedralize(&b, &in, &out, &add, &bgmin, &m);
+    }
+    catch (...){
+        tet.Clear();
+        return true;//wbtest
+    }
 
     assert(out.firstnumber == 0);
 
@@ -77,4 +84,7 @@ bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const 
     return true;
 }
 
-
+bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const std::list<Face> & faces, const std::list<Edge> & edges)
+{
+    
+}

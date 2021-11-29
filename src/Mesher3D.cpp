@@ -14,11 +14,11 @@ Mesher3D::Mesher3D()
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "odb";
     // std::string projName = "odb";
 
-    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "subgds";
-    // std::string projName = "subgds";
+    std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "subgds";
+    std::string projName = "subgds";
   
-    std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "fccsp";
-    std::string projName = "fccsp";
+    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "fccsp";
+    // std::string projName = "fccsp";
 
     // dataPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test";
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "cube";
@@ -94,7 +94,7 @@ bool Mesher3D::RunGenerateMesh()
     }
     
     //
-    size_t level = 2;
+    size_t level = 0;
     log::Info("start create sub models..., level=%1%", level);
     StackLayerModel::CreateSubModels(db.model.get(), level);
 
@@ -108,14 +108,13 @@ bool Mesher3D::RunGenerateMesh()
         return false;
     }
 
-    //
-    // coor_t maxLength = std::max(bbox.Length(), bbox.Width()) / 10;
-    // log::Info("start split overlength edges... , max length: %1%", maxLength);
-    // res = MeshFlow3DMT::SplitOverlengthEdges(*db.model, maxLength, threads);
-    // if(!res){
-    //     log::Error("fail to splitting overlength edges");
-    //     return false;
-    // }
+    coor_t maxLength = std::max(bbox.Length(), bbox.Width()) / 10;
+    log::Info("start split overlength edges... , max length: %1%", maxLength);
+    res = MeshFlow3DMT::SplitOverlengthEdges(*db.model, maxLength, threads);
+    if(!res){
+        log::Error("fail to splitting overlength edges");
+        return false;
+    }
     
     //
     log::Info("start build mesh sketch models...");
@@ -128,8 +127,8 @@ bool Mesher3D::RunGenerateMesh()
     log::Info("total mesh sketch models: %1%", models->size());
 
     //
-    // log::Info("start insert grade points to mesh sketch layers...");
-    // res = MeshFlow3D::AddGradePointsForMeshModels(*models, 100);
+    log::Info("start insert grade points to mesh sketch layers...");
+    res = MeshFlow3D::AddGradePointsForMeshModels(*models, 100);
 
     //
     if(math::GT<float_t>(db.ctrl->smartZRatio, 1.0)){
@@ -144,7 +143,8 @@ bool Mesher3D::RunGenerateMesh()
     //
     log::Info("start generate mesh per sketch layer...");
     auto tetVec = std::make_unique<TetrahedronDataVec>();
-    res = MeshFlow3DMT::GenerateTetrahedronVecFromSketchModels(*models, *tetVec, threads);
+    if(0 == level) res = MeshFlow3D::GenerateTetrahedronVecFromSketchModel(models->front(), *tetVec);
+    else res = MeshFlow3D::GenerateTetrahedronVecFromSketchModels(*models, *tetVec);
     if(!res){
         log::Error("fail to generate mesh per sketch layer");
         return false;
