@@ -11,7 +11,7 @@ from vtkmodules.vtkCommonDataModel import (
     vtkPlane
 )
 from vtkmodules.vtkCommonTransforms import vtkTransform
-from vtkmodules.vtkFiltersGeneral import vtkTableBasedClipDataSet
+from vtkmodules.vtkFiltersGeneral import vtkShrinkFilter
 from vtkmodules.vtkIOLegacy import vtkUnstructuredGridReader
 from vtkmodules.vtkRenderingCore import (
     vtkActor,
@@ -20,7 +20,6 @@ from vtkmodules.vtkRenderingCore import (
     vtkRenderWindowInteractor,
     vtkRenderer
 )
-
 
 def get_filename(case, layer):
     cwd = os.getcwd()
@@ -31,7 +30,7 @@ def get_filename(case, layer):
         return path + case + '/' + case + '_' + str(layer) + '.vtk'
 
 def main():
-    filename = get_filename("subgds", 0)
+    filename = get_filename("fccsp", 1)
 
     # Create the reader for the data.
     reader = vtkUnstructuredGridReader()
@@ -40,7 +39,7 @@ def main():
 
     bounds = reader.GetOutput().GetBounds()
     center = reader.GetOutput().GetCenter()
-
+    
     colors = vtkNamedColors()
     renderer = vtkRenderer()
     renderer.SetBackground(colors.GetColor3d('Wheat'))
@@ -53,8 +52,12 @@ def main():
     interactor = vtkRenderWindowInteractor()
     interactor.SetRenderWindow(renderWindow)
     
+    shrink = vtkShrinkFilter()
+    shrink.SetInputConnection(reader.GetOutputPort())
+    shrink.SetShrinkFactor(0.6)
+        
     dataSetMapper = vtkDataSetMapper()
-    dataSetMapper.SetInputData(reader.GetOutput())
+    dataSetMapper.SetInputConnection(shrink.GetOutputPort())
     dataSetMapper.ScalarVisibilityOff()
 
     actor = vtkActor()
@@ -62,7 +65,7 @@ def main():
     actor.GetProperty().SetDiffuseColor(colors.GetColor3d('tomato'))
     actor.GetProperty().EdgeVisibilityOn()
     actor.GetProperty().SetLineWidth(0.2)
-    # clippedActor.SetScale(1.0, 1.0, 50)
+    # actor.SetScale(1.0, 1.0, 50)
 
     trans = vtkTransform()
     trans.Translate(-center[0], -center[1], -center[2])
