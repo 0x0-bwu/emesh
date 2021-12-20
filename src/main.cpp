@@ -44,6 +44,7 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
         mOp.workPath = filesystem::DirName(path);
         mOp.projName = filesystem::FileName(path);
 
+        //dimension
         if(surfOption->Count() == 1)
             mOp.surfaceMesh = true;
                 
@@ -93,10 +94,11 @@ int main(int argc, char *argv[])
     }
     else{
         auto mesher = std::unique_ptr<Mesher3D>(new Mesher3D);
-        mesher->db.workPath.reset(new std::string(options.workPath));
-        mesher->db.projName.reset(new std::string(options.projName));
+        // mesher->db.workPath.reset(new std::string(options.workPath));
+        // mesher->db.projName.reset(new std::string(options.projName));
         res = mesher->Run();
     }
+
     if(res) return EXIT_SUCCESS;
     return EXIT_FAILURE;
 };
