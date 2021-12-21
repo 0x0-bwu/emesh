@@ -7,7 +7,7 @@ bool MeshFlow3DMT::CleanGeometries(StackLayerPolygons & polygons, coor_t distanc
 {
     thread::ThreadPool pool(threads);
     for(size_t i = 0; i < polygons.size(); ++i)
-        pool.Submit(std::bind(&MeshFlow3D::CleanLayerGeometries, std::ref(polygons[i]), distance));        
+        pool.Submit(std::bind(&MeshFlow3D::CleanLayerGeometries, std::ref(*polygons[i]), distance));        
     
     return true;
 }
@@ -29,9 +29,9 @@ bool MeshFlow3DMT::ExtractModelsIntersections(std::vector<StackLayerModel * > & 
 //         return res;
 //     }
 //     else{
-//         if(nullptr == model.inGoems) return false;
+//         if(nullptr == model.inGeoms) return false;
 //         model.intersections.reset(new InterfaceIntersections);
-//         return ExtractInterfaceIntersections(*model.inGoems, *model.intersections, threads);
+//         return ExtractInterfaceIntersections(*model.inGeoms, *model.intersections, threads);
 //     }
 // }
 
@@ -65,7 +65,7 @@ bool MeshFlow3DMT::SplitOverlengthEdges(const StackLayerModel & model, coor_t ma
             res = res && SplitOverlengthEdges((*model.subModels[i]), maxLength, threads);
         return res;
     }
-    else return SplitOverlengthEdges(*model.inGoems, *model.intersections, maxLength, threads);
+    else return SplitOverlengthEdges(*model.inGeoms, *model.intersections, maxLength, threads);
 }
 
 bool MeshFlow3DMT::SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength, size_t threads)

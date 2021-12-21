@@ -23,7 +23,7 @@ Mesher2D::~Mesher2D()
 
 bool Mesher2D::Run()
 {
-    if(!db.workPath || !db.projName) return false;
+    if(options.workPath.empty() || options.projName.empty()) return false;
     
     InitLogger();
     
@@ -55,52 +55,52 @@ bool Mesher2D::RunGenerateMesh()
 {
     bool res(true);
     //
-    std::string ctrlFile = *db.workPath + GENERIC_FOLDER_SEPS + "mesh_input.txt";
+    std::string ctrlFile = options.workPath + GENERIC_FOLDER_SEPS + "mesh_input.txt";
     if(filesystem::FileExists(ctrlFile)){
         log::Info("find input mesh ctrl file %1%", ctrlFile);
 
-        res = MeshFileUtility::LoadMeshCtrlFile(ctrlFile, *db.meshCtrl);
+        res = MeshFileUtility::LoadMeshCtrlFile(ctrlFile, options.meshCtrl);
         if(res){ log::Info("load mesh ctrl file successfully!"); }
         else { log::Info("fail to load paras from mesh ctrl file, use default paras instead."); }
     }
 
     //
     log::Info("start to load geometries from file...");
-    db.inGoems.reset(new PolygonContainer);
-    std::string filename = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName;
-    res = MeshFlow2D::LoadGeometryFiles(filename, *db.inFormat, db.meshCtrl->scale2Int, *db.inGoems);
+    db.inGeoms.reset(new PolygonContainer);
+    std::string filename = options.workPath + GENERIC_FOLDER_SEPS + options.projName;
+    res = MeshFlow2D::LoadGeometryFiles(filename, options.iFileFormat, options.meshCtrl.scale2Int, *db.inGeoms);
     if(!res){
         log::Error("fail to load geometry from %1%", filename);
         return false;
     }
 
-    if(db.inGoems->empty()){
+    if(db.inGeoms->empty()){
         log::Error("no geometry load from file %1%", filename);
         return false;
     }
 
     //
     log::Info("start to calculate convex hull...");
-    auto outline = ConvexHull(*db.inGoems);
-    // db.inGoems->push_back(outline);//wbtest
+    auto outline = ConvexHull(*db.inGeoms);
+    // db.inGeoms->push_back(outline);//wbtest
     Box2D<coor_t> bbox = Extent(outline);
-    // db.inGoems->push_back(toPolygon(bbox));/wbtest
+    // db.inGeoms->push_back(toPolygon(bbox));/wbtest
 
     //wbtest
-    db.meshCtrl->minEdgeLen = std::min(bbox.Length(), bbox.Width()) / 3000;
-    db.meshCtrl->maxEdgeLen = std::max(bbox.Length(), bbox.Width()) / 3;
-    db.meshCtrl->minAlpha = math::Rad(15);
+    options.meshCtrl.minEdgeLen = std::min(bbox.Length(), bbox.Width()) / 3000;
+    options.meshCtrl.maxEdgeLen = std::max(bbox.Length(), bbox.Width()) / 3;
+    options.meshCtrl.minAlpha = math::Rad(15);
 
     //
     log::Info("start to extract intersections...");
     db.segments.reset(new Segment2DContainer);
-    res = MeshFlow2D::ExtractIntersections(*db.inGoems, *db.segments);
+    res = MeshFlow2D::ExtractIntersections(*db.inGeoms, *db.segments);
     if(!res){
         log::Error("fail to extract intersections!");
         return false;
     }
 
-    db.inGoems.reset();
+    db.inGeoms.reset();
     db.edges.reset(new IndexEdgeList);
     db.points.reset(new Point2DContainer);
     
@@ -116,7 +116,7 @@ bool Mesher2D::RunGenerateMesh()
     
     //
     log::Info("start to merge closed points and remap edges...");
-    res = MeshFlow2D::MergeClosePointsAndRemapEdge(*db.points, *db.edges, db.meshCtrl->tolerance);
+    res = MeshFlow2D::MergeClosePointsAndRemapEdge(*db.points, *db.edges, options.meshCtrl.tolerance);
     if(!res){
         log::Error("fail to merge closed points and remap edges!");
         return false;
@@ -155,14 +155,14 @@ bool Mesher2D::RunGenerateMesh()
 
     log::Info("start to refine mesh...");
     size_t iteration = 5000;//wbtest
-    res = MeshFlow2D::TriangulationRefinement(*db.triangulation, db.meshCtrl->minAlpha, db.meshCtrl->minEdgeLen, db.meshCtrl->maxEdgeLen, iteration);
+    res = MeshFlow2D::TriangulationRefinement(*db.triangulation, options.meshCtrl.minAlpha, options.meshCtrl.minEdgeLen, options.meshCtrl.maxEdgeLen, iteration);
     if(!res){
         log::Error("fail to refine mesh!");
         return false;
     }
     
     log::Info("start to write mesh result...");
-    res = MeshFlow2D::ExportMeshResult(filename, FileFormat::MSH, *db.triangulation, 1.0 / db.meshCtrl->scale2Int);
+    res = MeshFlow2D::ExportMeshResult(filename, FileFormat::MSH, *db.triangulation, 1.0 / options.meshCtrl.scale2Int);
     if(!res){
         log::Error("fail to write mesh result!");
         return false;
@@ -175,8 +175,8 @@ bool Mesher2D::RunGenerateMesh()
 bool Mesher2D::RunMeshEvaluation()
 {
     if(!db.triangulation){
-        if(*db.inFormat == FileFormat::MSH){
-            std::string mshFile = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName + ".msh";
+        if(options.iFileFormat == FileFormat::MSH){
+            std::string mshFile = options.workPath + GENERIC_FOLDER_SEPS + options.projName + ".msh";
             log::Info("loading mesh data from %1%", mshFile);
             if(!filesystem::FileExists(mshFile)){
                 log::Error("file %1% not exist!", mshFile);
@@ -184,7 +184,7 @@ bool Mesher2D::RunMeshEvaluation()
             }
 
             db.triangulation.reset(new TriangulationData);
-            auto res = MeshFileUtility::ImportMshFile(mshFile, *db.triangulation, db.meshCtrl->scale2Int);
+            auto res = MeshFileUtility::ImportMshFile(mshFile, *db.triangulation, options.meshCtrl.scale2Int);
             if(!res){
                 log::Error("fail to load mesh from %1%", mshFile);
                 return false;
@@ -198,8 +198,8 @@ bool Mesher2D::RunMeshEvaluation()
     }
 
     log::Info("start to generate mesh report...");
-    std::string filename = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName + ".rpt";
-    auto res = MeshFlow2D::GenerateReport(filename, *db.triangulation, 1.0 / db.meshCtrl->scale2Int);
+    std::string filename = options.workPath + GENERIC_FOLDER_SEPS + options.projName + ".rpt";
+    auto res = MeshFlow2D::GenerateReport(filename, *db.triangulation, 1.0 / options.meshCtrl.scale2Int);
     if(!res){
         log::Error("fail to generate mesh report");
         return false;
@@ -211,8 +211,8 @@ bool Mesher2D::RunMeshEvaluation()
 
 void Mesher2D::InitLogger()
 {
-    std::string dbgFile = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName + ".dbg";
-    std::string logFile = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName + ".log";
+    std::string dbgFile = options.workPath + GENERIC_FOLDER_SEPS + options.projName + ".dbg";
+    std::string logFile = options.workPath + GENERIC_FOLDER_SEPS + options.projName + ".log";
 
     auto traceSink = std::make_shared<log::StreamSinkMT>(std::cout);
     auto debugSink = std::make_shared<log::FileSinkMT>(dbgFile);
@@ -231,18 +231,18 @@ void Mesher2D::CloseLogger()
     log::ShutDown();
 }
 
-bool MeshFlow2D::LoadGeometryFiles(const std::string & filename, FileFormat format, float_t scale2Int, std::list<Polygon2D<coor_t> > & polygons)
+bool MeshFlow2D::LoadGeometryFiles(const std::string & filename, FileFormat format, float_t scale, PolygonContainer & polygons)
 {
     try {
         switch (format) {
             case FileFormat::DomDmc : {
                 std::string dom = filename + ".dom";
                 std::string dmc = filename + ".dmc";
-                return MeshFileUtility::LoadDomDmcFiles(dom, dmc, scale2Int, polygons);
+                return MeshFileUtility::LoadDomDmcFiles(dom, dmc, scale, polygons);
             }
             case FileFormat::WKT : {
                 std::string wkt = filename + ".wkt";
-                return MeshFileUtility::LoadWktFile(wkt, scale2Int, polygons);
+                return MeshFileUtility::LoadWktFile(wkt, scale, polygons);
             }
             default : return false;
         }
@@ -251,7 +251,7 @@ bool MeshFlow2D::LoadGeometryFiles(const std::string & filename, FileFormat form
     return true;
 }
 
-bool MeshFlow2D::ExtractIntersections(const std::list<Polygon2D<coor_t> > & polygons, std::vector<Segment2D<coor_t> > & segments)
+bool MeshFlow2D::ExtractIntersections(const PolygonContainer & polygons, std::vector<Segment2D<coor_t> > & segments)
 {
     segments.clear();
     std::list<Segment2D<coor_t> > temp;

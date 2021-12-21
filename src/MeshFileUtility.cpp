@@ -7,7 +7,7 @@
 #include <memory>
 using namespace generic;
 using namespace emesh;
-bool MeshFileUtility::LoadMeshCtrlFile(const std::string & txt, MeshCtrl2D & ctrl)
+bool MeshFileUtility::LoadMeshCtrlFile(const std::string & txt, Mesh2Ctrl & ctrl)
 {
     std::ifstream in(txt);
     if(!in.is_open()) return false;
@@ -48,27 +48,21 @@ bool MeshFileUtility::LoadMeshCtrlFile(const std::string & txt, MeshCtrl2D & ctr
     return true;
 }
 
-bool MeshFileUtility::LoadWktFile(const std::string & wkt, float_t scale2Int, std::list<Polygon2D<coor_t> > & polygons)
+bool MeshFileUtility::LoadWktFile(const std::string & wkt, float_t scale, PolygonContainer & polygons)
 {
     polygons.clear();
     std::list<Polygon2D<float_t> > tmp;
     if(!geometry::GeometryIO::Read<Polygon2D<float_t> >(wkt, std::back_inserter(tmp))) return false;
 
-    auto trans = makeScaleTransform2D(scale2Int);
+    auto trans = makeScaleTransform2D(scale);
     for(const auto & t : tmp){
         auto ts = trans * t;
-        polygons.emplace_back(ts.Cast<coor_t>());
+        polygons.emplace_back(std::move(ts.Cast<coor_t>()));
     }
     return true;
 }
 
-bool MeshFileUtility::LoadWktFile(const std::string & wkt, std::list<PolygonWithHoles2D<coor_t> > & pwhs)
-{
-    pwhs.clear();
-    return geometry::GeometryIO::Read<PolygonWithHoles2D<coor_t> >(wkt, std::back_inserter(pwhs));
-}
-
-bool MeshFileUtility::LoadDomDmcFiles(const std::string & dom, const std::string & dmc, float_t scale2Int, std::list<Polygon2D<coor_t> > & polygons)
+bool MeshFileUtility::LoadDomDmcFiles(const std::string & dom, const std::string & dmc, float_t scale2Int, PolygonContainer & polygons)
 {
     std::ifstream f_dom(dom);
     if(!f_dom.is_open()) return false;

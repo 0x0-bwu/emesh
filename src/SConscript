@@ -10,6 +10,7 @@ source_files = [
     'MeshFileUtility.cpp',
     'MeshFlow3D.cpp',
     'MeshFlowMT.cpp',
+    'MeshIO.cpp',
     'Tetrahedralizator.cpp',
     '../thirdpart/tetgen/predicates.cxx',
     '../thirdpart/tetgen/tetgen.cxx',

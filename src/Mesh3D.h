@@ -11,19 +11,20 @@ namespace emesh {
 class MeshSketchLayer
 {
 public:
+    Polygon2D<coor_t> outline;//wbtest
     coor_t height[2] = {0, 0};//0 - top, 1 - bot
-    std::shared_ptr<PolygonContainer> polygons = nullptr;
-    std::shared_ptr<Segment2DContainer> constrains[2] = { nullptr, nullptr };
-    std::shared_ptr<Point2DContainer> addPoints[2] = { nullptr, nullptr};
+    SPtr<PolygonContainer> polygons = nullptr;
+    SPtr<Segment2DContainer> constrains[2] = { nullptr, nullptr };
+    SPtr<Point2DContainer> addPoints[2] = { nullptr, nullptr };
 
     MeshSketchLayer() = default;
     MeshSketchLayer(const MeshSketchLayer & other) = default;
     MeshSketchLayer & operator= (const MeshSketchLayer & other) = default;
 
-    void SetConstrains(std::shared_ptr<Segment2DContainer> top, std::shared_ptr<Segment2DContainer> bot);
+    void SetConstrains(SPtr<Segment2DContainer> top, SPtr<Segment2DContainer> bot);
     void SetTopBotHeight(coor_t tH, coor_t bH);
     coor_t GetHeight() const;
-    std::unique_ptr<Point3DContainer> GetAdditionalPoints() const;
+    UPtr<Point3DContainer> GetAdditionalPoints() const;
     std::pair<MeshSketchLayer, MeshSketchLayer> Slice() const;
 };
 
@@ -42,10 +43,10 @@ class StackLayerModel
 {
 public:
     Box2D<coor_t> bbox;
-    std::shared_ptr<StackLayerInfos> sInfos = nullptr;
-    std::shared_ptr<StackLayerPolygons> inGoems = nullptr;
-    std::shared_ptr<InterfaceIntersections> intersections = nullptr;
-    std::unique_ptr<StackLayerModel> subModels[4] = { nullptr, nullptr, nullptr, nullptr};
+    SPtr<StackLayerInfos> sInfos = nullptr;
+    SPtr<StackLayerPolygons> inGeoms = nullptr;
+    SPtr<InterfaceIntersections> intersections = nullptr;
+    UPtr<StackLayerModel> subModels[4] = { nullptr, nullptr, nullptr, nullptr };
 
     StackLayerModel() = default;
     virtual ~StackLayerModel() = default;
@@ -81,23 +82,24 @@ public:
             subModels[i]->sInfos = sInfos;
         }
 
-        if(inGoems){
+        if(inGeoms){
             for(size_t i = 0; i < 4; ++i){
-                subModels[i]->inGoems = std::make_shared<StackLayerPolygons>();
-                subModels[i]->inGoems->resize(inGoems->size());
+                subModels[i]->inGeoms = std::make_shared<StackLayerPolygons>(inGeoms->size(), nullptr);
+                for(auto & inGeom : *(subModels[i]->inGeoms))
+                    inGeom = std::make_shared<PolygonContainer>();
             }
 
-            for(size_t i = 0; i < inGoems->size(); ++i){
+            for(size_t i = 0; i < inGeoms->size(); ++i){
                 for(size_t j = 0; j < 4; ++j){
-                    subModels[j]->inGoems->at(i).emplace_back(toPolygon(subBoxes[j]));
+                    subModels[j]->inGeoms->at(i)->emplace_back(toPolygon(subBoxes[j]));
                 }//boundary
-                auto & polygons = inGoems->at(i);
+                auto & polygons = *(inGeoms->at(i));
                 while(!polygons.empty()){
                     bool contains = false;
                     auto & polygon = polygons.back();
                     for(size_t j = 0; j < 4; ++j){
                         if(Contains(subBoxes[j], Extent(polygon), true)){
-                            subModels[j]->inGoems->at(i).emplace_back(std::move(polygon));
+                            subModels[j]->inGeoms->at(i)->emplace_back(std::move(polygon));
                             contains = true;
                             break;
                         }
@@ -107,14 +109,14 @@ public:
                             std::list<Polygon2D<coor_t> > results;
                             boolean::Intersect(polygon, subBoxes[j], results);
                             for(auto & result : results){
-                                subModels[j]->inGoems->at(i).emplace_back(std::move(result));
+                                subModels[j]->inGeoms->at(i)->emplace_back(std::move(result));
                             }
                         }
                     }
                     polygons.pop_back();
                 }
             }
-            inGoems.reset();
+            inGeoms.reset();
         }
     }
 

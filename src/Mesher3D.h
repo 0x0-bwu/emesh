@@ -1,26 +1,29 @@
 #ifndef EMESH_MESHER3D_H
 #define EMESH_MESHER3D_H
+#include <boost/core/noncopyable.hpp>
 #include "generic/geometry/Tetrahedralization.hpp"
 #include "generic/math/MathUtility.hpp"
 #include "generic/tools/Log.hpp"
 #include "Mesh3D.h"
 namespace emesh {
-struct Mesh3DFlowDB
+
+struct Mesh3Options
 {
-    Mesh3DFlowDB()
-     : ctrl(new MeshCtrl3D)
-    {}
-    Mesh3DFlowDB(Mesh3DFlowDB && ) = delete;
-    Mesh3DFlowDB(const Mesh3DFlowDB & ) = delete;
-    Mesh3DFlowDB & operator= (Mesh3DFlowDB && ) = delete;
-    Mesh3DFlowDB & operator= (const Mesh3DFlowDB & ) = delete;
+    size_t threads;
+    Mesh3Ctrl meshCtrl;
+    std::string workPath;
+    std::string projName;
+    FileFormat iFileFormat = FileFormat::WKT;
+    FileFormat oFileFormat = FileFormat::VTK;
+};
+
+struct Mesh3DB : private boost::noncopyable
+{
+    Mesh3DB() = default;
 
     template<typename T>
     using Data = std::unique_ptr<T>;
-
-    Data<std::string> workPath;
-    Data<std::string> projName;
-    Data<MeshCtrl3D>       ctrl;
+    
     Data<StackLayerModel>  model;
     Data<TetrahedronData>  tetras;
 };
@@ -34,7 +37,9 @@ public:
     ~Mesher3D();
     bool Run();
     bool RunTest();
-    Mesh3DFlowDB db;
+
+    Mesh3DB db;
+    Mesh3Options options;
 private:
     void InitLogger();
     void CloseLogger();

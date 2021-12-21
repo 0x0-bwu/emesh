@@ -15,7 +15,7 @@ class MeshFlow3D
         }
     };
 public:
-    static bool LoadGeometryFiles(const std::string & workPath, const std::string & projName, StackLayerPolygons & polygons, StackLayerInfos & infos);
+    static bool LoadGeometryFiles(const std::string & filename, FileFormat format, StackLayerPolygons & polygons, StackLayerInfos & infos);
     static bool CleanGeometries(StackLayerPolygons & polygons, coor_t distance);
     static bool CleanLayerGeometries(PolygonContainer & polygons, coor_t distance);
     static bool ExtractModelsIntersections(std::vector<StackLayerModel * > & models);

@@ -1,6 +1,7 @@
 #include "Mesher2D.h"
 #include "Mesher3D.h"
 #include "generic/tools/ProgramOptions.hpp"
+#include "generic/tools/Format.hpp"
 #include "generic/tools/Tools.hpp"
 #include <iostream>
 #include <stdlib.h>
@@ -8,10 +9,27 @@ using namespace generic;
 using namespace emesh;
 struct MeshOptions
 {
+    size_t threads = 1;
     bool surfaceMesh = false;
     bool printHelpMsg = false;
     std::string workPath;
     std::string projName;
+    FileFormat iFileFormat = FileFormat::WKT;
+    FileFormat oFileFormat = FileFormat::VTK;
+
+    void SetMesh2Options(Mesh2Options & op) const
+    {
+        //todo
+    }
+
+    void SetMesh3Options(Mesh3Options & op) const
+    {
+        op.threads = threads;
+        // op.workPath = workPath;//wbtest
+        // op.projName = projName;//wbtest
+        op.iFileFormat = iFileFormat;
+        op.oFileFormat = oFileFormat;
+    }
 };
 
 void PrintHelpMessage(std::ostream & os = std::cout)
@@ -25,10 +43,14 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
     OptionParser op("mesh options");
 	auto helpOption = op.Add<Switch>("h", "help", "produce help message");
     auto surfOption = op.Add<Switch>("s", "surface", "planer surface mesh");
+    auto ifmtOption = op.Add<Value<std::string> >("i", "input", "input file format", "wkt");
+    auto ofmtOption = op.Add<Value<std::string> >("o", "output", "output file format", "vtk");
+    auto jobsOption = op.Add<Value<int> >("j", "jobs", "cpu core numbers in use", 1);
     try {
         op.Parse(argc, argv);
 
-        if(helpOption->Count() == 1){
+        //help
+        if(helpOption->isSet()){
             mOp.printHelpMsg = true;
             return true;
         }
@@ -45,9 +67,37 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
         mOp.projName = filesystem::FileName(path);
 
         //dimension
-        if(surfOption->Count() == 1)
+        if(surfOption->isSet())
             mOp.surfaceMesh = true;
-                
+        
+        //input format
+        if(ifmtOption->isSet()){
+            auto fmt = ifmtOption->GetValue();
+            if("domdmc" == fmt || "dmcdom == fmt") mOp.iFileFormat = FileFormat::DomDmc;
+            else if("wkt" == fmt) mOp.iFileFormat = FileFormat::WKT;
+            else{
+                os << format::Format2String("Error: unsupported input file format: %1%", fmt) << std::endl;
+                return false;
+            }
+        }
+
+        //output format
+        if(ofmtOption->isSet()){
+            auto fmt = ifmtOption->GetValue();
+            if("msh" == fmt) mOp.oFileFormat = FileFormat::MSH;
+            else if("vtk" == fmt) mOp.oFileFormat = FileFormat::VTK;
+            else{
+                os << format::Format2String("Error: unsupported output file format: %1%", fmt) << std::endl;
+                return false;
+            }
+        }
+
+        //threads
+        if(jobsOption->isSet()){
+            int num = jobsOption->GetValue();
+            if(num > 0) mOp.threads = static_cast<size_t>(num);
+        }
+
         return true;
     }
     catch (const InvalidOption & e)
@@ -89,13 +139,15 @@ int main(int argc, char *argv[])
 
     bool res = true;
     if(options.surfaceMesh){
-        os << "Error: plainer surface mesh currently disabled!" << std::endl;
-        return EXIT_FAILURE;
+        auto mesher = std::unique_ptr<Mesher2D>(new Mesher2D);
+        options.SetMesh2Options(mesher->options);
+        res = mesher->Run();
+        // os << "Error: plainer surface mesh currently disabled!" << std::endl;
+        // return EXIT_FAILURE;
     }
     else{
         auto mesher = std::unique_ptr<Mesher3D>(new Mesher3D);
-        // mesher->db.workPath.reset(new std::string(options.workPath));
-        // mesher->db.projName.reset(new std::string(options.projName));
+        options.SetMesh3Options(mesher->options);
         res = mesher->Run();
     }
 

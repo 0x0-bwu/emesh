@@ -4,37 +4,64 @@
 #include "generic/tree/QuadTreeUtilityMT.hpp"
 #include "Tetrahedralizator.h"
 #include "MeshFileUtility.h"
+#include "MeshIO.h"
 using namespace generic;
 using namespace emesh;
-
-bool MeshFlow3D::LoadGeometryFiles(const std::string & workPath, const std::string & projName, StackLayerPolygons & polygons, std::vector<StackLayerInfo> & infos)
+bool MeshFlow3D::LoadGeometryFiles(const std::string & filename, FileFormat format, StackLayerPolygons & polygons, StackLayerInfos & infos)
 {
-    std::string baseName = workPath + GENERIC_FOLDER_SEPS + projName;
-    std::string stackFile = baseName + "_stack.info";
-    if(!LoadLayerStackInfos(stackFile, infos)) return false;
+    try {
+        std::string stackFile = filename + ".stack";
+        if(!LoadLayerStackInfos(stackFile, infos)) return false;
 
-    polygons.clear();
+        polygons.assign(infos.size(), nullptr);
 
-    bool res = true;
-    polygons.resize(infos.size());
-    for(size_t i = 0; i < infos.size(); ++i){
-        std::string filename = baseName + "_" + std::to_string(i + 1) + ".wkt";
-        std::list<PolygonWithHoles2D<coor_t> > pwhs;
-        res = res && MeshFileUtility::LoadWktFile(filename, pwhs);
-        for(auto & pwh : pwhs){
-            polygons[i].push_back(std::move(pwh.outline));
-            for(auto & hole : pwh.holes)
-                polygons[i].push_back(std::move(hole));
+        switch (format) {
+            case FileFormat::DomDmc : {
+                std::string dom = filename + ".dom";
+                std::string dmc = filename + ".dmc";
+                auto results = std::make_shared<std::map<int, SPtr<PolygonContainer> > >(); 
+                if(!io::LoadDomDmcFiles(dom, dmc, *results)) return false;
+                if(results->size() != infos.size()) return false;
+
+                size_t i = 0;
+                for(auto result : results)
+                    polygons[i++] = result.second;
+                
+                return true;
+            }
+            case FileFormat::WKT : {
+                bool res = true;
+                auto pwhs = std::make_shared<std::list<PolygonWithHoles2D<coor_t> > >();
+                for(size_t i = 0; i < infos.size(); ++i){
+                    std::string filename = filename + "_" + std::to_string(i + 1) + ".wkt";
+                    res = res && io::LoadWktFile(filename, *pwhs);
+                    polygons[i] = std::make_shared<PolygonContainer>();
+                    for(auto & pwh : pwhs){
+                        polygons[i]->emplace_back(std::move(pwh.outline));
+                        for(auto & hole : pwh.holes)
+                            polygons[i]->emplace_back(std::move(hole));
+                    }
+                }
+
+                return true;
+            }
+            default : return false;
         }
     }
-    return res;
+    catch (...) {
+        infos.clear();
+        polygons.clear();
+        return false;
+    }
+    return true;
 }
 
 bool MeshFlow3D::CleanGeometries(StackLayerPolygons & polygons, coor_t distance)
 {
     bool res = true;
     for(auto & layer : polygons){
-        res = res && CleanLayerGeometries(layer, distance);
+        if(nullptr == layer) continue;
+        res = res && CleanLayerGeometries(*layer, distance);
     }
     return res;
 }
@@ -68,9 +95,9 @@ bool MeshFlow3D::ExtractModelIntersections(StackLayerModel & model)
         return res;
     }
     else{
-        if(nullptr == model.inGoems) return false;
+        if(nullptr == model.inGeoms) return false;
         model.intersections.reset(new InterfaceIntersections);
-        return ExtractInterfaceIntersections(*model.inGoems, *model.intersections);
+        return ExtractInterfaceIntersections(*model.inGeoms, *model.intersections);
     }
 }
 
@@ -115,7 +142,7 @@ bool MeshFlow3D::SplitOverlengthEdges(const StackLayerModel & model, coor_t maxL
             res = res && SplitOverlengthEdges((*model.subModels[i]), maxLength);
         return res;
     }
-    else return SplitOverlengthEdges(*model.inGoems, *model.intersections, maxLength); 
+    else return SplitOverlengthEdges(*model.inGeoms, *model.intersections, maxLength); 
 }
 
 bool MeshFlow3D::SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength)
@@ -135,7 +162,7 @@ bool MeshFlow3D::BuildMeshSketchModels(StackLayerModel & model, std::vector<Mesh
     for(size_t i = 0; i < subModels.size(); ++i){
         StackLayerModel * subModel = subModels[i];
         models[i].bbox = subModel->bbox;
-        BuildMeshSketchModel(*subModel->inGoems, *subModel->intersections, *subModel->sInfos, models[i]);
+        BuildMeshSketchModel(*subModel->inGeoms, *subModel->intersections, *subModel->sInfos, models[i]);
     }
     return true;
 }
@@ -145,14 +172,8 @@ bool MeshFlow3D::BuildMeshSketchModel(const StackLayerPolygons & polygons, const
 {
     if((polygons.size() + 1) != intersections.size()) return false;
     if(polygons.size() != infos.size()) return false;
-
-    //wbtest, fix the copy issue
-    std::vector<std::shared_ptr<PolygonContainer> > layerPolygons;
-    for(const auto & polygon : polygons)
-        layerPolygons.push_back(std::make_shared<PolygonContainer>(polygon.begin(), polygon.end()));
     
-
-    std::vector<std::shared_ptr<Segment2DContainer> > layerSegments;
+    std::vector<std::shared_ptr<Segment2DContainer> > layerSegments;//wbtest, copy issue
     for(const auto & segments : intersections)
         layerSegments.push_back(std::make_shared<Segment2DContainer>(segments.begin(), segments.end()));
 
@@ -160,7 +181,7 @@ bool MeshFlow3D::BuildMeshSketchModel(const StackLayerPolygons & polygons, const
     for(size_t i = 0; i < polygons.size(); ++i){
         MeshSketchLayer layer;
         layer.SetTopBotHeight(infos[i].elevation, infos[i].elevation - infos[i].thickness);
-        layer.polygons = layerPolygons[i];
+        layer.polygons = polygons[i];
         layer.SetConstrains(layerSegments[i], layerSegments[i + 1]);
         model.layers.emplace_back(std::move(layer));
         GENERIC_ASSERT(layer.GetHeight() > 0)

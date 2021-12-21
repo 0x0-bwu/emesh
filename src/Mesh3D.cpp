@@ -2,7 +2,7 @@
 using namespace generic;
 using namespace emesh;
 
-void MeshSketchLayer::SetConstrains(std::shared_ptr<Segment2DContainer> top, std::shared_ptr<Segment2DContainer> bot)
+void MeshSketchLayer::SetConstrains(SPtr<Segment2DContainer> top, SPtr<Segment2DContainer> bot)
 {
     constrains[0] = top;
     constrains[1] = bot;
@@ -35,7 +35,6 @@ std::unique_ptr<Point3DContainer> MeshSketchLayer::GetAdditionalPoints() const
     if(0 == points.size()) return nullptr;
     return std::make_unique<Point3DContainer>(points);   
 }
-
 
 std::pair<MeshSketchLayer, MeshSketchLayer> MeshSketchLayer::Slice() const
 {

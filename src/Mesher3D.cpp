@@ -24,8 +24,8 @@ Mesher3D::Mesher3D()
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "cube";
     // std::string projName = "cube";
     
-    db.workPath.reset(new std::string(std::move(workPath)));
-    db.projName.reset(new std::string(std::move(projName)));
+    options.workPath = workPath;
+    options.projName = projName;//wbtest
 }
 
 Mesher3D::~Mesher3D()
@@ -34,7 +34,7 @@ Mesher3D::~Mesher3D()
 
 bool Mesher3D::Run()
 {
-    if(!db.workPath || !db.projName) return false;
+    if(options.workPath.empty() || options.projName.empty()) return false;
 
     InitLogger();
     
@@ -59,15 +59,14 @@ bool Mesher3D::RunTest()
 
 bool Mesher3D::RunGenerateMesh()
 {
-    bool res(true);
-    size_t threads = db.ctrl->threads;
-
+    bool res = true;
+    std::string filename = options.workPath + GENERIC_FOLDER_SEPS + options.projName;
     //
     log::Info("start to load geometries from file...");
     db.model.reset(new StackLayerModel);
     db.model->sInfos.reset(new StackLayerInfos);
-    db.model->inGoems.reset(new StackLayerPolygons);
-    res = MeshFlow3D::LoadGeometryFiles(*db.workPath, *db.projName, *(db.model->inGoems), *(db.model->sInfos));
+    db.model->inGeoms.reset(new StackLayerPolygons);
+    res = MeshFlow3D::LoadGeometryFiles(filename, options.iFileFormat, *(db.model->inGeoms), *(db.model->sInfos));
     if(!res){
         log::Error("fail to load geometries");
         return false;
@@ -75,18 +74,18 @@ bool Mesher3D::RunGenerateMesh()
 
     size_t geomCount = 0;
     geometry::Box2D<coor_t> bbox;
-    for(const auto & geoms : *(db.model->inGoems)){
-        geomCount += geoms.size();
-        for(const auto & geom : geoms)
+    for(auto geoms : *(db.model->inGeoms)){
+        geomCount += geoms->size();
+        for(const auto & geom : *geoms)
             bbox |= geometry::Extent(geom);
     }
     log::Info("total geometries: %1%", geomCount);
     db.model->bbox = bbox;
 
     //
-    if(db.ctrl->tolerance != 0){
-        log::Info("start simplify geometries... , tolerance: %1%", db.ctrl->tolerance);
-        res = MeshFlow3DMT::CleanGeometries(*(db.model->inGoems), db.ctrl->tolerance, threads);
+    if(options.meshCtrl.tolerance != 0){
+        log::Info("start simplify geometries... , tolerance: %1%", options.meshCtrl.tolerance);
+        res = MeshFlow3DMT::CleanGeometries(*(db.model->inGeoms), options.meshCtrl.tolerance, options.threads);
         if(!res){
             log::Error("fail to simplify geometries, tolerance might be to large");
             return false;
@@ -102,7 +101,7 @@ bool Mesher3D::RunGenerateMesh()
     StackLayerModel::GetAllLeafModels(db.model.get(), subModels);
     //
     log::Info("start extract models intersections...");
-    res = MeshFlow3DMT::ExtractModelsIntersections(subModels, threads);
+    res = MeshFlow3DMT::ExtractModelsIntersections(subModels, options.threads);
     if(!res){
         log::Error("fail to extract models intersections");
         return false;
@@ -110,7 +109,7 @@ bool Mesher3D::RunGenerateMesh()
 
     coor_t maxLength = std::max(bbox.Length(), bbox.Width()) / 10;
     log::Info("start split overlength edges... , max length: %1%", maxLength);
-    res = MeshFlow3DMT::SplitOverlengthEdges(*db.model, maxLength, threads);
+    res = MeshFlow3DMT::SplitOverlengthEdges(*db.model, maxLength, options.threads);
     if(!res){
         log::Error("fail to splitting overlength edges");
         return false;
@@ -131,9 +130,9 @@ bool Mesher3D::RunGenerateMesh()
     res = MeshFlow3D::AddGradePointsForMeshModels(*models, 100);
 
     //
-    if(math::GT<float_t>(db.ctrl->smartZRatio, 1.0)){
-        log::Info("start slice mesh sketch models... , ratio: %1%", db.ctrl->smartZRatio);
-        res = MeshFlow3D::SliceOverheightModels(*models, db.ctrl->smartZRatio);
+    if(math::GT<float_t>(options.meshCtrl.smartZRatio, 1.0)){
+        log::Info("start slice mesh sketch models... , ratio: %1%", options.meshCtrl.smartZRatio);
+        res = MeshFlow3D::SliceOverheightModels(*models, options.meshCtrl.smartZRatio);
         if(!res){
             log::Error("fail to slice mesh sketch models");
             return false;
@@ -153,7 +152,7 @@ bool Mesher3D::RunGenerateMesh()
 
     log::Info("start write layer mesh result files...");
     for(size_t i = 0; i < tetVec->size(); ++i){
-        std::string filename = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName + "_" + std::to_string(i + 1) + ".vtk";
+        std::string filename = options.workPath + GENERIC_FOLDER_SEPS + options.projName + "_" + std::to_string(i + 1) + ".vtk";
         MeshFlow3D::ExportVtkFile(filename, tetVec->at(i));
     }
 
@@ -167,8 +166,8 @@ bool Mesher3D::RunGenerateMesh()
     }
 
     log::Info("start write final mesh result file...");
-    std::string filename = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName + ".vtk";
-    MeshFlow3D::ExportVtkFile(filename, *db.tetras);
+    std::string vtkFile = filename + ".vtk";
+    MeshFlow3D::ExportVtkFile(vtkFile, *db.tetras);
 
     log::Info("total nodes: %1%", db.tetras->vertices.size());
     log::Info("total elements: %1%", db.tetras->tetrahedrons.size());
@@ -178,8 +177,8 @@ bool Mesher3D::RunGenerateMesh()
 
 void Mesher3D::InitLogger()
 {
-    std::string dbgFile = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName + ".dbg";
-    std::string logFile = *db.workPath + GENERIC_FOLDER_SEPS + *db.projName + ".log";
+    std::string dbgFile = options.workPath + GENERIC_FOLDER_SEPS + options.projName + ".dbg";
+    std::string logFile = options.workPath + GENERIC_FOLDER_SEPS + options.projName + ".log";
 
     auto traceSink = std::make_shared<log::StreamSinkMT>(std::cout);
     auto debugSink = std::make_shared<log::FileSinkMT>(dbgFile);

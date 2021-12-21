@@ -1,5 +1,6 @@
 #ifndef EMESH_MESHER2D_H
 #define EMESH_MESHER2D_H
+#include <boost/core/noncopyable.hpp>
 #include "generic/geometry/TriangleEvaluator.hpp"
 #include "generic/geometry/Triangulator.hpp"
 #include "generic/math/MathUtility.hpp"
@@ -11,30 +12,27 @@ using namespace generic::geometry;
 using namespace generic::geometry::tri;
 using generic::common::float_type;
 
-struct Mesh2DFlowDB
+struct Mesh2Options
 {
-    Mesh2DFlowDB()
-     : meshCtrl(new MeshCtrl2D),
-       inFormat(new FileFormat(FileFormat::DomDmc)),
-       outFormat(new FileFormat(FileFormat::MSH))
-    {}
-    Mesh2DFlowDB(Mesh2DFlowDB && ) = delete;
-    Mesh2DFlowDB(const Mesh2DFlowDB & ) = delete;
-    Mesh2DFlowDB & operator= (Mesh2DFlowDB && ) = delete;
-    Mesh2DFlowDB & operator= (const Mesh2DFlowDB & ) = delete;
+    size_t threads;
+    Mesh2Ctrl meshCtrl;
+    std::string workPath;
+    std::string projName;
+    FileFormat iFileFormat = FileFormat::DomDmc;
+    FileFormat oFileFormat = FileFormat::MSH;
+};
+
+struct Mesh2DB : private boost::noncopyable
+{
+    Mesh2DB() = default;
 
     template<typename T>
     using Data = std::unique_ptr<T>;
 
-    Data<MeshTasks>   tasks;
-    Data<std::string> workPath;
-    Data<std::string> projName;
-    Data<MeshCtrl2D>  meshCtrl;
-    Data<FileFormat>  inFormat;
-    Data<FileFormat>  outFormat;
+    Data<MeshTasks>          tasks;
     Data<IndexEdgeList>      edges;
     Data<Point2DContainer>   points;
-    Data<PolygonContainer>   inGoems;
+    Data<PolygonContainer>   inGeoms;
     Data<Segment2DContainer> segments;
     Data<TriangulationData>  triangulation;
 };
@@ -48,7 +46,9 @@ public:
     Mesher2D();
     ~Mesher2D();
     bool Run();
-    Mesh2DFlowDB db;
+
+    Mesh2DB db;
+    Mesh2Options options;
 private:
     void InitLogger();
     void CloseLogger();
@@ -62,8 +62,8 @@ class MeshFlow2D
     friend class Mesher2D;
     using float_t = typename Mesher2D::float_t;
 public:
-    static bool LoadGeometryFiles(const std::string & filename, FileFormat format, float_t scale2Int, std::list<Polygon2D<coor_t> > & polygons);
-    static bool ExtractIntersections(const std::list<Polygon2D<coor_t> > & polygons, std::vector<Segment2D<coor_t> > & segments);
+    static bool LoadGeometryFiles(const std::string & filename, FileFormat format, float_t scale, PolygonContainer & polygons);
+    static bool ExtractIntersections(const PolygonContainer & polygons, std::vector<Segment2D<coor_t> > & segments);
     static bool ExtractTopology(const std::vector<Segment2D<coor_t> > & segments, std::vector<Point2D<coor_t> > & points, std::list<IndexEdge> & edges);
     static bool MergeClosePointsAndRemapEdge(std::vector<Point2D<coor_t> > & points, std::list<IndexEdge> & edges, coor_t tolorance);
     static bool SplitOverlengthEdges(std::vector<Point2D<coor_t> > & points, std::list<IndexEdge> & edges, coor_t maxLength);
