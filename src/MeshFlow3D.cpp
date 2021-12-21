@@ -74,7 +74,8 @@ bool MeshFlow3D::CleanLayerGeometries(PolygonContainer & polygons, coor_t distan
         if(polygon.Front() == polygon.Back()) polygon.PopBack();
         if(out.Size() < 3) return false;
         if(out.Size() != polygon.Size())
-            polygon = std::move(out);
+            //polygon = std::move(out);
+            std::swap(polygon, out);
     }
     return true;
 }
