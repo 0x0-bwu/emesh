@@ -1,6 +1,7 @@
 #ifndef EMESH_MESHCOMMON_H
 #define EMESH_MESHCOMMON_H
 #include "generic/geometry/TriangleEvaluator.hpp"
+#include "generic/geometry/PolygonWithHoles.hpp"
 #include "generic/geometry/Triangulator.hpp"
 #include "generic/math/MathUtility.hpp"
 #include <memory>
@@ -15,8 +16,17 @@ using generic::common::float_type;
 using coor_t = int64_t;
 using float_t = float_type<coor_t>;
 
-template <typename T, typename... Args> using UPtr = std::unique_ptr<T, Args...>;
-template <typename T, typename... Args> using SPtr = std::shared_ptr<T, Args...>;
+template <typename T>
+using Ptr = T*;
+
+template <typename T>
+using CPtr = const T*;
+
+template <typename T, typename... Args>
+using UPtr = std::unique_ptr<T, Args...>;
+
+template <typename T, typename... Args>
+using SPtr = std::shared_ptr<T, Args...>;
 
 enum class FileFormat { DomDmc, WKT, MSH, VTK };
 enum class MeshTask { MeshGeneration, MeshEvaluation };
@@ -51,6 +61,7 @@ using PolygonContainer = std::vector<Polygon2D<coor_t> >;
 using TriangulationData = Triangulation<Point2D<coor_t> >;
 using Segment2DContainer = std::vector<Segment2D<coor_t> >;
 using Segment3DContainer = std::vector<Segment3D<coor_t> >;
+using PolygonWithHolesContainer = std::list<PolygonWithHoles2D<coor_t> >;
 
 using StackLayerInfos = std::vector<StackLayerInfo>;
 using StackLayerPolygons = std::vector<SPtr<PolygonContainer> >;

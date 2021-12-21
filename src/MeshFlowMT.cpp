@@ -73,11 +73,11 @@ bool MeshFlow3DMT::SplitOverlengthEdges(StackLayerPolygons & polygons, Interface
     if(0 == maxLength) return true;
     thread::ThreadPool pool(threads);
 
-    pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthPolygons, std::ref(polygons.front()), maxLength));
-    pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthPolygons, std::ref(polygons.back()), maxLength));
+    pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthPolygons, std::ref(*(polygons.front())), maxLength));
+    pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthPolygons, std::ref(*(polygons.back())), maxLength));
 
     for(size_t i = 0; i < intersections.size(); ++i){
-        pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthSegments, std::ref(intersections[i]), maxLength));
+        pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthSegments, std::ref(*(intersections[i])), maxLength));
     }        
     return true;
 }

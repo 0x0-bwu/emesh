@@ -6,8 +6,12 @@ using namespace emesh;
 
 Mesher3D::Mesher3D()
 {
-    std::string dataPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "thirdpart" + GENERIC_FOLDER_SEPS + "internal" + GENERIC_FOLDER_SEPS + "testdata";
-    
+    std::string dataPath = filesystem::CurrentPath() + 
+                            GENERIC_FOLDER_SEPS + "thirdpart" + 
+                            GENERIC_FOLDER_SEPS + "internal" + 
+                            GENERIC_FOLDER_SEPS + "testdata" +
+                            GENERIC_FOLDER_SEPS + "wkt";
+
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "Iluvatar";
     // std::string projName = "Iluvatar";
 
@@ -68,7 +72,7 @@ bool Mesher3D::RunGenerateMesh()
     db.model->inGeoms.reset(new StackLayerPolygons);
     res = MeshFlow3D::LoadGeometryFiles(filename, options.iFileFormat, *(db.model->inGeoms), *(db.model->sInfos));
     if(!res){
-        log::Error("fail to load geometries");
+        log::Error("failed to load geometries");
         return false;
     }
 
@@ -87,7 +91,7 @@ bool Mesher3D::RunGenerateMesh()
         log::Info("start simplify geometries... , tolerance: %1%", options.meshCtrl.tolerance);
         res = MeshFlow3DMT::CleanGeometries(*(db.model->inGeoms), options.meshCtrl.tolerance, options.threads);
         if(!res){
-            log::Error("fail to simplify geometries, tolerance might be to large");
+            log::Error("failed to simplify geometries, tolerance might be to large");
             return false;
         }
     }
@@ -95,15 +99,15 @@ bool Mesher3D::RunGenerateMesh()
     //
     size_t level = 0;
     log::Info("start create sub models..., level=%1%", level);
-    StackLayerModel::CreateSubModels(db.model.get(), level);
+    StackLayerModel::CreateSubModels(*db.model, level);
 
     std::vector<StackLayerModel *> subModels;
-    StackLayerModel::GetAllLeafModels(db.model.get(), subModels);
+    StackLayerModel::GetAllLeafModels(*db.model, subModels);
     //
     log::Info("start extract models intersections...");
     res = MeshFlow3DMT::ExtractModelsIntersections(subModels, options.threads);
     if(!res){
-        log::Error("fail to extract models intersections");
+        log::Error("failed to extract models intersections");
         return false;
     }
 
@@ -111,7 +115,7 @@ bool Mesher3D::RunGenerateMesh()
     log::Info("start split overlength edges... , max length: %1%", maxLength);
     res = MeshFlow3DMT::SplitOverlengthEdges(*db.model, maxLength, options.threads);
     if(!res){
-        log::Error("fail to splitting overlength edges");
+        log::Error("failed to splitting overlength edges");
         return false;
     }
     
@@ -120,7 +124,7 @@ bool Mesher3D::RunGenerateMesh()
     auto models = std::make_unique<std::vector<MeshSketchModel> >();
     res = MeshFlow3D::BuildMeshSketchModels(*db.model, *models);
     if(!res){
-        log::Error("fail to build mesh sketch models");
+        log::Error("failed to build mesh sketch models");
         return false;
     }
     log::Info("total mesh sketch models: %1%", models->size());
@@ -134,7 +138,7 @@ bool Mesher3D::RunGenerateMesh()
         log::Info("start slice mesh sketch models... , ratio: %1%", options.meshCtrl.smartZRatio);
         res = MeshFlow3D::SliceOverheightModels(*models, options.meshCtrl.smartZRatio);
         if(!res){
-            log::Error("fail to slice mesh sketch models");
+            log::Error("failed to slice mesh sketch models");
             return false;
         }
     }
@@ -145,7 +149,7 @@ bool Mesher3D::RunGenerateMesh()
     if(0 == level) res = MeshFlow3D::GenerateTetrahedronVecFromSketchModel(models->front(), *tetVec);
     else res = MeshFlow3D::GenerateTetrahedronVecFromSketchModels(*models, *tetVec);
     if(!res){
-        log::Error("fail to generate mesh per sketch layer");
+        log::Error("failed to generate mesh per sketch layer");
         return false;
     }
     db.model.reset();
@@ -161,7 +165,7 @@ bool Mesher3D::RunGenerateMesh()
     db.tetras.reset(new TetrahedronData);
     res = MeshFlow3D::MergeTetrahedrons(*db.tetras, *tetVec);
     if(!res){
-        log::Error("fail to merge mesh results");
+        log::Error("failed to merge mesh results");
         return false;
     }
 

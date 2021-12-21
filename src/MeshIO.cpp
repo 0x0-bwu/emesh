@@ -35,14 +35,14 @@ bool LoadDomDmcFiles(const std::string & dom, const std::string & dmc, std::map<
         if(iter == results.end()){
             iter = results.insert(std::make_pair(layerId, std::make_shared<PolygonContainer>())).first;
         }
-        iter.second->emplace_back(std::move(polygon));
+        iter->second->emplace_back(std::move(polygon));
     }
     f_dom.close();
     f_dmc.close();
     return true;
 }
 
-bool LoadWktFile(const std::string & wkt, std::list<PolygonWithHoles2D<coor_t> > & pwhs)
+bool LoadWktFile(const std::string & wkt, PolygonWithHolesContainer & pwhs)
 {
     pwhs.clear();
     return geometry::GeometryIO::Read<PolygonWithHoles2D<coor_t> >(wkt, std::back_inserter(pwhs));

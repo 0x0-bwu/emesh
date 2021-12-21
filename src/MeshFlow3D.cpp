@@ -24,19 +24,19 @@ bool MeshFlow3D::LoadGeometryFiles(const std::string & filename, FileFormat form
                 if(results->size() != infos.size()) return false;
 
                 size_t i = 0;
-                for(auto result : results)
+                for(auto result : *results)
                     polygons[i++] = result.second;
                 
                 return true;
             }
             case FileFormat::WKT : {
                 bool res = true;
-                auto pwhs = std::make_shared<std::list<PolygonWithHoles2D<coor_t> > >();
+                auto pwhs = std::make_shared<PolygonWithHolesContainer>();
                 for(size_t i = 0; i < infos.size(); ++i){
-                    std::string filename = filename + "_" + std::to_string(i + 1) + ".wkt";
-                    res = res && io::LoadWktFile(filename, *pwhs);
+                    std::string wkt = filename + "_" + std::to_string(i + 1) + ".wkt";
+                    res = res && io::LoadWktFile(wkt, *pwhs);
                     polygons[i] = std::make_shared<PolygonContainer>();
-                    for(auto & pwh : pwhs){
+                    for(auto & pwh : *pwhs){
                         polygons[i]->emplace_back(std::move(pwh.outline));
                         for(auto & hole : pwh.holes)
                             polygons[i]->emplace_back(std::move(hole));
@@ -49,8 +49,8 @@ bool MeshFlow3D::LoadGeometryFiles(const std::string & filename, FileFormat form
         }
     }
     catch (...) {
-        infos.clear();
         polygons.clear();
+        infos.clear();
         return false;
     }
     return true;
@@ -106,11 +106,14 @@ bool MeshFlow3D::ExtractInterfaceIntersections(const StackLayerPolygons & polygo
     intersections.clear();
     if(polygons.size() == 0) return false;
 
-    intersections.resize(polygons.size() + 1);
-    ExtractInterfaceIntersection(polygons.front(), intersections.front());
-    if(polygons.size() > 1) ExtractInterfaceIntersection(polygons.back(), intersections.back());    
+    intersections.resize(polygons.size() + 1, nullptr);
+    for(auto & intersection : intersections)
+        intersection = std::make_shared<Segment2DContainer>();
+    
+    ExtractInterfaceIntersection(*(polygons.front()), *(intersections.front()));//wbtest
+    if(polygons.size() > 1) ExtractInterfaceIntersection(*(polygons.back()), *(intersections.back()));    
     for(size_t i = 0; i < polygons.size() - 1; ++i){
-        ExtractInterfaceIntersection(polygons[i], polygons[i + 1], intersections[i + 1]);
+        ExtractInterfaceIntersection(*(polygons[i]), *(polygons[i + 1]), *(intersections[i + 1]));
     }
     return true;
 }
@@ -149,18 +152,18 @@ bool MeshFlow3D::SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIn
 {
     SplitOverlengthIntersections(intersections, maxLength);
     //for stacklayer polygons, only need split top and bot
-    SplitOverlengthPolygons(polygons.front(), maxLength);
-    SplitOverlengthPolygons(polygons.back(), maxLength);
+    SplitOverlengthPolygons(*(polygons.front()), maxLength);
+    SplitOverlengthPolygons(*(polygons.back()), maxLength);
     return true;
 }
 
 bool MeshFlow3D::BuildMeshSketchModels(StackLayerModel & model, std::vector<MeshSketchModel> & models)
 {
-    std::vector<StackLayerModel * > subModels;
-    StackLayerModel::GetAllLeafModels(&model, subModels);
+    std::vector<Ptr<StackLayerModel> > subModels;
+    StackLayerModel::GetAllLeafModels(model, subModels);
     models.resize(subModels.size());
     for(size_t i = 0; i < subModels.size(); ++i){
-        StackLayerModel * subModel = subModels[i];
+        auto subModel = subModels[i];
         models[i].bbox = subModel->bbox;
         BuildMeshSketchModel(*subModel->inGeoms, *subModel->intersections, *subModel->sInfos, models[i]);
     }
@@ -173,16 +176,12 @@ bool MeshFlow3D::BuildMeshSketchModel(const StackLayerPolygons & polygons, const
     if((polygons.size() + 1) != intersections.size()) return false;
     if(polygons.size() != infos.size()) return false;
     
-    std::vector<std::shared_ptr<Segment2DContainer> > layerSegments;//wbtest, copy issue
-    for(const auto & segments : intersections)
-        layerSegments.push_back(std::make_shared<Segment2DContainer>(segments.begin(), segments.end()));
-
     model.layers.clear();
     for(size_t i = 0; i < polygons.size(); ++i){
         MeshSketchLayer layer;
         layer.SetTopBotHeight(infos[i].elevation, infos[i].elevation - infos[i].thickness);
         layer.polygons = polygons[i];
-        layer.SetConstrains(layerSegments[i], layerSegments[i + 1]);
+        layer.SetConstrains(intersections[i], intersections[i + 1]);
         model.layers.emplace_back(std::move(layer));
         GENERIC_ASSERT(layer.GetHeight() > 0)
     }
@@ -480,8 +479,8 @@ bool MeshFlow3D::SliceOverheightLayers(std::list<MeshSketchLayer> & layers, floa
 void MeshFlow3D::SplitOverlengthIntersections(InterfaceIntersections & intersections, coor_t maxLength)
 {
     if(0 == maxLength) return;
-    for(auto & intersection : intersections)
-        SplitOverlengthSegments(intersection, maxLength);
+    for(auto intersection : intersections)
+        SplitOverlengthSegments(*intersection, maxLength);
 }
 
 void MeshFlow3D::SplitOverlengthSegments(Segment2DContainer & segments, coor_t maxLength)

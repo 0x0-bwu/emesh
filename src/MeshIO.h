@@ -7,7 +7,7 @@ namespace emesh {
 namespace io {
 
 bool LoadDomDmcFiles(const std::string & dom, const std::string & dmc, std::map<int, SPtr<PolygonContainer> > & results);
-bool LoadWktFile(const std::string & wkt, std::list<PolygonWithHoles2D<coor_t> > & pwhs);
+bool LoadWktFile(const std::string & wkt, PolygonWithHolesContainer & pwhs);
 
 }//namespace io
 }//namespace emesh

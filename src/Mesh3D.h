@@ -51,21 +51,30 @@ public:
     StackLayerModel() = default;
     virtual ~StackLayerModel() = default;
 
-    inline static void GetAllLeafModels(StackLayerModel * model, std::vector<StackLayerModel *> & subModels)
+    inline static void GetAllLeafModels(StackLayerModel & model, std::vector<Ptr<StackLayerModel> > & subModels)
     {
-        if(model->hasSubModels()){
-            for(size_t i = 0; i < 4; ++i)
-                GetAllLeafModels(model->subModels[i].get(), subModels);
+        if(model.hasSubModels()){
+            for(auto & subModel : model.subModels)
+                GetAllLeafModels(*subModel, subModels);
         }
-        else subModels.push_back(model);
+        else subModels.push_back(&model);
     }
 
-    inline static void CreateSubModels(StackLayerModel * model, size_t depth)
+    inline static void GetAllLeafModels(const StackLayerModel & model, std::vector<CPtr<StackLayerModel> > & subModels)
+    {
+        if(model.hasSubModels()){
+            for(auto & subModel : model.subModels)
+                GetAllLeafModels(*subModel, subModels);
+        }
+        else subModels.push_back(&model);
+    }
+
+    inline static void CreateSubModels(StackLayerModel & model, size_t depth)
     {
         while(depth > 0){
-            std::vector<StackLayerModel *> subModels;
+            std::vector<Ptr<StackLayerModel> > subModels;
             GetAllLeafModels(model, subModels);
-            for(auto * subModel : subModels)
+            for(auto subModel : subModels)
                 subModel->CreateSubModels();
             depth--;
         }
