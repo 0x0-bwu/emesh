@@ -205,13 +205,13 @@ bool MeshFileUtility::ExportMshFile(const std::string & msh, const Triangulation
     const auto & triangles = triangulation.triangles;
 
     char sp(32);
-    out << sp << vertices.size() << sp << triangles.size() << std::endl;
+    out << sp << vertices.size() << sp << triangles.size() << GENERIC_DEFAULT_EOL;
 
     out << std::setiosflags(std::ios::right);
     out << std::setiosflags(std::ios::fixed) << std::setprecision(12);
 
     size_t index = 0;
-    out << "NODES" << std::endl;
+    out << "NODES" << GENERIC_DEFAULT_EOL;
     for(const auto & vertex : vertices){
         index++;
         const auto & point = points[vertex.index];
@@ -219,12 +219,12 @@ bool MeshFileUtility::ExportMshFile(const std::string & msh, const Triangulation
         for(size_t i = 0; i < Point2D<coor_t>::dim; ++i) {
             out << std::setw(20) << (point[i] * scale) << sp;
         }
-        out << "P" << index << std::endl;
+        out << "P" << index << GENERIC_DEFAULT_EOL;
     }
-    out << "END_OF_NODES" << std::endl;
+    out << "END_OF_NODES" << GENERIC_DEFAULT_EOL;
 
     index = 0;
-    out << "ELEMENTS" << std::endl;
+    out << "ELEMENTS" << GENERIC_DEFAULT_EOL;
     for(const auto & triangle : triangles){
         index++;
         const auto & vs = triangle.vertices;
@@ -233,9 +233,9 @@ bool MeshFileUtility::ExportMshFile(const std::string & msh, const Triangulation
             out << std::setw(10) << vs[i] + 1;
         }
         out << std::setw(10) << vs[2] + 1;
-        out << sp << "R1" << std::endl;
+        out << sp << "R1" << GENERIC_DEFAULT_EOL;
     }
-    out << "END_OF_ELEMENTS" << std::endl;
+    out << "END_OF_ELEMENTS" << GENERIC_DEFAULT_EOL;
     out << "END";
 
     out.close();
@@ -248,19 +248,19 @@ bool MeshFileUtility::ExportReportFile(const std::string & rpt, const Mesher2D::
     if(!out.is_open()) return false;
 
     auto currentTime = std::time(nullptr);
-    out << std::asctime(std::localtime(&currentTime)) << std::endl;
+    out << std::asctime(std::localtime(&currentTime)) << GENERIC_DEFAULT_EOL;
 
     auto printProgress = [&out](float_t progress, size_t len) mutable { for(size_t i = 0; i < progress * len; ++i) out << '#'; };
 
     out << std::setiosflags(std::ios::left);
     out << std::fixed << std::setprecision(2);
-    out << std::setw(16) << "Nodes:" << evaluation.nodes << std::endl;
-    out << std::setw(16) << "Elements:" << evaluation.elements << std::endl;
-    out << std::endl;
+    out << std::setw(16) << "Nodes:" << evaluation.nodes << GENERIC_DEFAULT_EOL;
+    out << std::setw(16) << "Elements:" << evaluation.elements << GENERIC_DEFAULT_EOL;
+    out << GENERIC_DEFAULT_EOL;
 
-    out << std::setw(16) << "Minimum Angle:" << math::Deg(evaluation.minAngle) << std::endl;
-    out << std::setw(16) << "Maximum Angle:" << math::Deg(evaluation.maxAngle) << std::endl;
-    out << std::setw(16) << "Distribution:" << std::endl;
+    out << std::setw(16) << "Minimum Angle:" << math::Deg(evaluation.minAngle) << GENERIC_DEFAULT_EOL;
+    out << std::setw(16) << "Maximum Angle:" << math::Deg(evaluation.maxAngle) << GENERIC_DEFAULT_EOL;
+    out << std::setw(16) << "Distribution:" << GENERIC_DEFAULT_EOL;
 
     size_t colums = evaluation.triAngleHistogram.size();
     float_t step = math::Deg(math::pi / 3 / colums);
@@ -272,14 +272,14 @@ bool MeshFileUtility::ExportReportFile(const std::string & rpt, const Mesher2D::
         out << std::setw(16) << label.str();
         if(pureText) out << (evaluation.triAngleHistogram.at(i) * 100) << "%";
         else printProgress(evaluation.triAngleHistogram.at(i), 100);
-        out << std::endl;
+        out << GENERIC_DEFAULT_EOL;
         start += step;
     }
-    out << std::endl;
+    out << GENERIC_DEFAULT_EOL;
 
-    out << std::setw(16) << "Minimum Edge:" << evaluation.minEdgeLen * scale << std::endl;
-    out << std::setw(16) << "Maximum Edge:" << evaluation.maxEdgeLen * scale << std::endl;
-    out << std::setw(16) << "Distribution:" << std::endl;
+    out << std::setw(16) << "Minimum Edge:" << evaluation.minEdgeLen * scale << GENERIC_DEFAULT_EOL;
+    out << std::setw(16) << "Maximum Edge:" << evaluation.maxEdgeLen * scale << GENERIC_DEFAULT_EOL;
+    out << std::setw(16) << "Distribution:" << GENERIC_DEFAULT_EOL;
 
     colums = evaluation.triEdgeLenHistogram.size();
     step = (evaluation.maxEdgeLen - evaluation.minEdgeLen) / colums * scale;
@@ -292,7 +292,7 @@ bool MeshFileUtility::ExportReportFile(const std::string & rpt, const Mesher2D::
         out << std::setw(24) << label.str();
         if(pureText) out << (evaluation.triEdgeLenHistogram.at(i) * 100) << "%";
         else printProgress(evaluation.triEdgeLenHistogram.at(i), 100);
-        out << std::endl;
+        out << GENERIC_DEFAULT_EOL;
         start += step;
     }
 

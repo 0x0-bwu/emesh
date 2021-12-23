@@ -1,7 +1,7 @@
 #include "Tetrahedralizator.h"
 #include "tetgen/tetgen.h"
 using namespace emesh;
-bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const std::list<Edge> & edges, const std::vector<Point> * addin)
+bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const std::list<Edge> & edges)
 {
     tet.Clear();
 
@@ -31,20 +31,6 @@ bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const 
     for(const auto & edge : edges){
         in.edgelist[index++] = edge.v1();
         in.edgelist[index++] = edge.v2();
-    }
-
-    if(addin && addin->size()){
-        b.insertaddpoints = 1;//-i
-
-        add.mesh_dim = 3;
-        add.numberofpointattributes= 0;
-        add.numberofpoints = addin->size();
-        add.pointlist = new double[add.numberofpoints * add.mesh_dim];
-
-        index = 0;
-        for(size_t i = 0; i < add.numberofpoints; ++i)
-            for(size_t j = 0; j < add.mesh_dim; ++j)
-                add.pointlist[index++] = (*addin)[i][j];
     }
 
     // b.quality = 1;
@@ -123,8 +109,9 @@ bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const 
     for(const auto & face : faces){
         auto f = &(in.facetlist[index++]);
         f->numberofpolygons = 1;
-        f->numberofholes = 0;
         f->polygonlist = new typename tetgenio::polygon[f->numberofpolygons];
+        f->numberofholes = 0;
+        f->holelist = (double*)(nullptr);
         auto p = &(f->polygonlist[0]);
         p->numberofvertices = face.size();
         p->vertexlist = new int[p->numberofvertices];

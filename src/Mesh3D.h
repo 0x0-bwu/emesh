@@ -99,9 +99,9 @@ public:
             }
 
             for(size_t i = 0; i < inGeoms->size(); ++i){
-                for(size_t j = 0; j < 4; ++j){
-                    subModels[j]->inGeoms->at(i)->emplace_back(toPolygon(subBoxes[j]));
-                }//boundary
+                // for(size_t j = 0; j < 4; ++j){
+                //     subModels[j]->inGeoms->at(i)->emplace_back(toPolygon(subBoxes[j]));
+                // }//boundary, wbtest
                 auto & polygons = *(inGeoms->at(i));
                 while(!polygons.empty()){
                     bool contains = false;
@@ -148,6 +148,7 @@ private:
     }
 };
 
+using IndexFace = generic::geometry::tet::IndexFace;
 using TetrahedronData = generic::geometry::tet::Tetrahedralization<Point3D<coor_t> >;
 using TetrahedronDataVec = std::vector<TetrahedronData>;
 

@@ -20,7 +20,7 @@ public:
     Tetrahedralization<Point> & tet;
     Tetrahedralizator(Tetrahedralization<Point> & t) : tet(t) {}
 
-    bool Tetrahedralize(const std::vector<Point> & points, const std::list<Edge> & edges, const std::vector<Point> * addin = nullptr);
+    bool Tetrahedralize(const std::vector<Point> & points, const std::list<Edge> & edges);
     bool Tetrahedralize(const std::vector<Point> & points, const std::list<Face> & faces, const std::list<Edge> & edges);
 };
 }//namespace emesh

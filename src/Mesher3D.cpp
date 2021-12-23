@@ -18,11 +18,11 @@ Mesher3D::Mesher3D()
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "odb";
     // std::string projName = "odb";
 
-    std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "subgds";
-    std::string projName = "subgds";
+    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "subgds";
+    // std::string projName = "subgds";
   
-    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "fccsp";
-    // std::string projName = "fccsp";
+    std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "fccsp";
+    std::string projName = "fccsp";
 
     // dataPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test";
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "cube";
@@ -53,10 +53,10 @@ bool Mesher3D::RunTest()
     //test
     TetrahedronData tet;
     std::vector<Point3D<coor_t> > points {{0, 0, 0}, {10, 0, 0}, {10, 10, 0}, {0, 10, 0}, {0, 0, 10}, {10, 0, 10}, {10, 10, 10}, {0, 10, 10}, {5, 5, 5}};
-    std::list<IndexEdge> edges {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7} };
-    std::vector<Point3D<coor_t> > addin {{5, 5, 5}};
-    auto res = MeshFlow3D::Tetrahedralize(points, edges, nullptr, tet);
-    std::cout << "total nodes: " << tet.vertices.size() << std::endl;
+    std::list<std::vector<size_t> > faces {{0, 1, 2, 3}, {4, 5, 6, 7}, {0, 1, 5, 4}, {1, 2, 6, 5}, {2, 3, 7, 6}, {3, 0, 4, 7}};
+    std::list<IndexEdge> edges {{0, 8}, {1, 8}, {2, 8}, {3, 8}};
+    auto res = MeshFlow3D::Tetrahedralize(points, faces, edges, tet);
+    std::cout << "total nodes: " << tet.vertices.size() << GENERIC_DEFAULT_EOL;
     std::cout << "total elements: " << tet.tetrahedrons.size() << std::endl;
     return res;
 }

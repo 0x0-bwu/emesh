@@ -36,11 +36,11 @@ public:
     static bool GenerateTetrahedronVecFromSketchModel(MeshSketchModel & model, TetrahedronDataVec & tetVec);
     static bool GenerateTetrahedronDataFromSketchModel(MeshSketchModel & model, TetrahedronData & tet);
     static bool GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet);
-    static bool ExtractTopology(const MeshSketchLayer & layer, Point3DContainer & points, std::list<IndexEdge> & edges);
+    static bool ExtractTopology(const MeshSketchLayer & layer, Point3DContainer & points, std::list<IndexFace> & faces, std::list<IndexEdge> & edges);
     static bool SplitOverlengthEdges(Point3DContainer & points, std::list<IndexEdge> & edges, coor_t maxLength, bool surfaceOnly = true);
     static bool WriteNodeAndEdgeFiles(const std::string & filename, const Point3DContainer & points, const std::list<IndexEdge> & edges);
     static bool LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos);
-    static bool Tetrahedralize(const Point3DContainer & points, const std::list<IndexEdge> & edges, const Point3DContainer * addin, TetrahedronData & tet);
+    static bool Tetrahedralize(const Point3DContainer & points, const std::list<std::vector<size_t> > & faces, const std::list<IndexEdge> & edges, TetrahedronData & tet);
     static bool MergeTetrahedrons(TetrahedronData & master, TetrahedronDataVec & tetVec);
     static bool ExportVtkFile(const std::string & filename, const TetrahedronData & tet);
 

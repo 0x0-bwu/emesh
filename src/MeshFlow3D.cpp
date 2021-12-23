@@ -180,6 +180,7 @@ bool MeshFlow3D::BuildMeshSketchModel(const StackLayerPolygons & polygons, const
     model.layers.clear();
     for(size_t i = 0; i < polygons.size(); ++i){
         MeshSketchLayer layer;
+        layer.outline = geometry::toPolygon(model.bbox);//wbtest
         layer.SetTopBotHeight(infos[i].elevation, infos[i].elevation - infos[i].thickness);
         layer.polygons = polygons[i];
         layer.SetConstrains(intersections[i], intersections[i + 1]);
@@ -259,23 +260,25 @@ bool MeshFlow3D::GenerateTetrahedronDataFromSketchModel(MeshSketchModel & model,
 
 bool MeshFlow3D::GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet)
 {
-    auto edges = std::make_unique<std::list<IndexEdge> >();
+    auto faces = std::make_unique<std::list<IndexFace> >();
+     auto edges = std::make_unique<std::list<IndexEdge> >();
     auto points = std::make_unique<std::vector<Point3D<coor_t> > >();
-    if(!ExtractTopology(layer, *points, *edges)) return false;
+    if(!ExtractTopology(layer, *points, *faces, *edges)) return false;
 
     auto addin = layer.GetAdditionalPoints();
     if(addin){
         points->reserve(points->size() + addin->size());
         points->insert(points->end(), addin->begin(), addin->end());
     }
-
-    if(!Tetrahedralize(*points, *edges, nullptr, tet)) return false;
+    
+    if(!Tetrahedralize(*points, *faces, *edges, tet)) return false;
     return true;
 }
 
-bool MeshFlow3D::ExtractTopology(const MeshSketchLayer & layer, Point3DContainer & points, std::list<IndexEdge> & edges)
+bool MeshFlow3D::ExtractTopology(const MeshSketchLayer & layer, Point3DContainer & points, std::list<IndexFace> & faces, std::list<IndexEdge> & edges)
 {
-    edges.clear(); 
+    edges.clear();
+    faces.clear(); 
     points.clear();
 
     using EdgeSet = topology::UndirectedIndexEdgeSet;
@@ -351,6 +354,72 @@ bool MeshFlow3D::ExtractTopology(const MeshSketchLayer & layer, Point3DContainer
     return true;
 }
 
+// bool MeshFlow3D::ExtractTopology(const MeshSketchLayer & layer, Point3DContainer & points, std::list<IndexFace> & faces, std::list<IndexEdge> & edges)
+// {
+//     edges.clear();
+//     faces.clear(); 
+//     points.clear();
+
+//     using EdgeSet = topology::UndirectedIndexEdgeSet;
+//     using LayerIdxMap = std::unordered_map<coor_t, size_t>;
+//     using PointIdxMap = std::unordered_map<Point2D<coor_t>, size_t, PointHash<coor_t> >;
+
+//     EdgeSet edgeSet;
+//     PointIdxMap ptIdxMap[2];
+
+//     auto getH = [&layer](size_t lyrIdx){ return lyrIdx == 0 ? layer.height[0] : layer.height[1]; };//lyrIdx: 0-top, 1-bot
+//     auto getIndex = [&getH, &ptIdxMap, &points](const Point2D<coor_t> & p, size_t lyrIdx) mutable //lyrIdx: 0-top, 1-bot
+//     {
+//         if(!ptIdxMap[lyrIdx].count(p)){
+//             auto index = points.size();
+//             ptIdxMap[lyrIdx].insert(std::make_pair(p, index));
+//             points.push_back(Point3D<coor_t>(p[0], p[1], getH(lyrIdx)));
+//         }
+//         return ptIdxMap[lyrIdx].at(p);
+//     };
+
+//     auto addEdge = [&edges, &edgeSet](IndexEdge && e) mutable
+//     {
+//         if(e.v1() == e.v2()) return;
+//         if(edgeSet.count(e)) return;
+//         edges.emplace_back(e);
+//         edgeSet.insert(e);
+//     };
+
+
+//     for(size_t i = 0; i < 2; ++i){
+//         for(const auto & segment : *(layer.constrains[i])){
+//             IndexEdge e(getIndex(segment[0], i), getIndex(segment[1], i));
+//             addEdge(std::move(e));
+//         }
+//     }
+//     //boundary
+//     size_t size = layer.outline.Size();
+//     IndexFace topFace, botFace;
+//     for(size_t i = 0; i < size; ++i){
+//         size_t j = (i + 1) % size;
+//         // IndexFace side {getIndex(layer.outline[i], 0), getIndex(layer.outline[j], 0),
+//         //                 getIndex(layer.outline[j], 1), getIndex(layer.outline[i], 1)};
+//         // faces.emplace_back(std::move(side));
+//         topFace.emplace_back(getIndex(layer.outline[i], 0));
+//         botFace.emplace_back(getIndex(layer.outline[i], 1));
+//     }
+//     faces.emplace_back(std::move(topFace));
+//     faces.emplace_back(std::move(botFace));
+
+//     //side inside
+//     for(const auto & polygon : *layer.polygons){
+//         size_t size = polygon.Size();
+//         for(size_t i = 0; i < size; ++i){
+//             size_t j = (i + 1) % size;
+//             IndexFace side {getIndex(polygon[i], 0), getIndex(polygon[j], 0),
+//                             getIndex(polygon[j], 1), getIndex(polygon[i], 1)};
+//             faces.emplace_back(std::move(side));
+//         }
+//     }
+//     return true;
+// }
+
 bool MeshFlow3D::SplitOverlengthEdges(Point3DContainer & points, std::list<IndexEdge> & edges, coor_t maxLength, bool surfaceOnly)
 {
     if(0 == maxLength) return true;
@@ -406,14 +475,12 @@ bool MeshFlow3D::LoadLayerStackInfos(const std::string & filename, StackLayerInf
     return MeshFileUtility3D::LoadLayerStackInfos(filename, infos);
 }
 
-bool MeshFlow3D::Tetrahedralize(const Point3DContainer & points, const std::list<IndexEdge> & edges, const Point3DContainer * addin, TetrahedronData & t)
+bool MeshFlow3D::Tetrahedralize(const Point3DContainer & points, const std::list<std::vector<size_t> > & faces, const std::list<IndexEdge> & edges, TetrahedronData & tet)
 {
-    if(addin){
-        std::cout << "additional points: " << addin->size() << std::endl;//wbtest
-    }
-    Tetrahedralizator tetrahedralizator(t);
-    tetrahedralizator.Tetrahedralize(points, edges, addin);
+    Tetrahedralizator tetrahedralizator(tet);
+    return tetrahedralizator.Tetrahedralize(points, faces, edges);
 }
+
 
 bool MeshFlow3D::MergeTetrahedrons(TetrahedronData & master, TetrahedronDataVec & tetVec)
 {

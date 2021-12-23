@@ -10,6 +10,7 @@ using namespace emesh;
 struct MeshOptions
 {
     size_t threads = 1;
+    bool testFlow = false;
     bool surfaceMesh = false;
     bool printHelpMsg = false;
     std::string workPath;
@@ -41,6 +42,7 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
 {
     using namespace program_options;
     OptionParser op("mesh options");
+    auto testOption = op.Add<Switch>("t", "test", "test flow");
 	auto helpOption = op.Add<Switch>("h", "help", "produce help message");
     auto surfOption = op.Add<Switch>("s", "surface", "planer surface mesh");
     auto ifmtOption = op.Add<Value<std::string> >("i", "input", "input file format", "wkt");
@@ -48,6 +50,11 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
     auto jobsOption = op.Add<Value<int> >("j", "jobs", "cpu core numbers in use", 1);
     try {
         op.Parse(argc, argv);
+
+        //test
+        if(testOption->isSet()){
+            mOp.testFlow = true;
+        }
 
         //help
         if(helpOption->isSet()){
@@ -58,7 +65,7 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
         //work path
         auto noOptArgs = op.NonOptionArgs();
         if(noOptArgs.empty()){
-            os << "Error: missing argument" << std::endl;
+            os << "Error: missing argument" << GENERIC_DEFAULT_EOL;
             return false;
         }
 
@@ -76,7 +83,7 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
             if("domdmc" == fmt || "dmcdom == fmt") mOp.iFileFormat = FileFormat::DomDmc;
             else if("wkt" == fmt) mOp.iFileFormat = FileFormat::WKT;
             else{
-                os << format::Format2String("Error: unsupported input file format: %1%", fmt) << std::endl;
+                os << format::Format2String("Error: unsupported input file format: %1%", fmt) << GENERIC_DEFAULT_EOL;
                 return false;
             }
         }
@@ -87,7 +94,7 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
             if("msh" == fmt) mOp.oFileFormat = FileFormat::MSH;
             else if("vtk" == fmt) mOp.oFileFormat = FileFormat::VTK;
             else{
-                os << format::Format2String("Error: unsupported output file format: %1%", fmt) << std::endl;
+                os << format::Format2String("Error: unsupported output file format: %1%", fmt) << GENERIC_DEFAULT_EOL;
                 return false;
             }
         }
@@ -102,7 +109,7 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
     }
     catch (const InvalidOption & e)
     {
-        os << e.what() << std::endl;
+        os << e.what() << GENERIC_DEFAULT_EOL;
         os << "Error:";
         if(e.error == InvalidOption::Error::MissingArgument)
             os << "missing argument";
@@ -148,7 +155,9 @@ int main(int argc, char *argv[])
     else{
         auto mesher = std::unique_ptr<Mesher3D>(new Mesher3D);
         options.SetMesh3Options(mesher->options);
-        res = mesher->Run();
+        if(options.testFlow)
+            res = mesher->RunTest();
+        else res = mesher->Run();
     }
 
     if(res) return EXIT_SUCCESS;
