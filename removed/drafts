@@ -82,3 +82,58 @@ bool MeshFlow3D::ExtractTopology(StackLayerPolygons & polygons, const std::vecto
     }
     return true;
 }
+
+bool ImportMeshCtrlFile(const std::string & txt, Mesh2Ctrl & ctrl)
+{
+    std::ifstream in(txt);
+    if(!in.is_open()) return false;
+
+    std::string line, tmp;
+    float_t scale(0), tolerance(0), maxEdge(0), minEdge(0), minAlpha(0);
+    while(!in.eof()){
+        line.clear();
+        std::getline(in, line);
+        if(line.empty()) continue;
+        if(0 == line.rfind("Tolerance", 0)){
+            std::stringstream ss(line);
+            ss.ignore(std::string("Tolerance (um) = ").size());
+            ss >> tolerance;
+        }
+        if(0 == line.rfind("Max Edge Length")){
+            std::stringstream ss(line);
+            ss.ignore(std::string("Max Edge Length (um) = ").size());
+            ss >> maxEdge;
+        }
+        if(0 == line.rfind("QualityTarget")){
+            std::stringstream ss(line);
+            ss.ignore(std::string("QualityTarget = ").size());
+            ss >> minAlpha >> minEdge;
+        }
+    }
+
+    //validation
+    if(0 < tolerance) {
+        ctrl.scale2Int = 10 / tolerance;
+        ctrl.tolerance = tolerance * ctrl.scale2Int;
+
+        if(0 < minAlpha) ctrl.minAlpha = math::Rad(minAlpha);
+        if(0 < maxEdge) ctrl.maxEdgeLen = maxEdge * ctrl.scale2Int;
+        if(0 < minEdge) ctrl.minEdgeLen = minEdge * ctrl.scale2Int;
+    }
+    in.close();
+    return true;
+}
+
+bool MeshFileUtility::LoadWktFile(const std::string & wkt, float_t scale, PolygonContainer & polygons)
+{
+    polygons.clear();
+    std::list<Polygon2D<float_t> > tmp;
+    if(!geometry::GeometryIO::Read<Polygon2D<float_t> >(wkt, std::back_inserter(tmp))) return false;
+
+    auto trans = makeScaleTransform2D(scale);
+    for(const auto & t : tmp){
+        auto ts = trans * t;
+        polygons.emplace_back(std::move(ts.Cast<coor_t>()));
+    }
+    return true;
+}

@@ -1,9 +1,8 @@
 #include "MeshFlow3D.h"
-#include "generic/geometry/TetrahedralizationIO.hpp"
-#include "generic/geometry/Utility.hpp"
 #include "generic/tree/QuadTreeUtilityMT.hpp"
+#include "generic/thread/ThreadPool.hpp"
+#include "generic/geometry/Utility.hpp"
 #include "Tetrahedralizator.h"
-#include "MeshFileUtility.h"
 #include "MeshIO.h"
 using namespace generic;
 using namespace emesh;
@@ -11,7 +10,7 @@ bool MeshFlow3D::LoadGeometryFiles(const std::string & filename, FileFormat form
 {
     try {
         std::string stackFile = filename + ".stack";
-        if(!LoadLayerStackInfos(stackFile, infos)) return false;
+        if(!io::ImportLayerStackFile(stackFile, infos)) return false;
 
         polygons.assign(infos.size(), nullptr);
 
@@ -20,7 +19,7 @@ bool MeshFlow3D::LoadGeometryFiles(const std::string & filename, FileFormat form
                 std::string dom = filename + ".dom";
                 std::string dmc = filename + ".dmc";
                 auto results = std::make_shared<std::map<int, SPtr<PolygonContainer> > >(); 
-                if(!io::LoadDomDmcFiles(dom, dmc, *results)) return false;
+                if(!io::ImportDomDmcFiles(dom, dmc, *results)) return false;
                 if(results->size() != infos.size()) return false;
 
                 size_t i = 0;
@@ -34,7 +33,7 @@ bool MeshFlow3D::LoadGeometryFiles(const std::string & filename, FileFormat form
                 auto pwhs = std::make_shared<PolygonWithHolesContainer>();
                 for(size_t i = 0; i < infos.size(); ++i){
                     std::string wkt = filename + "_" + std::to_string(i + 1) + ".wkt";
-                    res = res && io::LoadWktFile(wkt, *pwhs);
+                    res = res && io::ImportWktFile(wkt, *pwhs);
                     polygons[i] = std::make_shared<PolygonContainer>();
                     for(auto & pwh : *pwhs){
                         polygons[i]->emplace_back(std::move(pwh.outline));
@@ -74,7 +73,6 @@ bool MeshFlow3D::CleanLayerGeometries(PolygonContainer & polygons, coor_t distan
         if(polygon.Front() == polygon.Back()) polygon.PopBack();
         if(out.Size() < 3) return false;
         if(out.Size() != polygon.Size())
-            //polygon = std::move(out);
             std::swap(polygon, out);
     }
     return true;
@@ -455,32 +453,25 @@ bool MeshFlow3D::SplitOverlengthEdges(Point3DContainer & points, std::list<Index
     return true;
 }
 
-bool MeshFlow3D::WriteNodeAndEdgeFiles(const std::string & filename, const Point3DContainer & points, const std::list<IndexEdge> & edges)
-{
-    geometry::tet::PiecewiseLinearComplex<Point3D<coor_t> >  plc;
-    plc.points = points;
-    plc.surfaces.resize(edges.size());
-    size_t index = 0;
+// bool MeshFlow3D::WriteNodeAndEdgeFiles(const std::string & filename, const Point3DContainer & points, const std::list<IndexEdge> & edges)
+// {
+//     geometry::tet::PiecewiseLinearComplex<Point3D<coor_t> >  plc;
+//     plc.points = points;
+//     plc.surfaces.resize(edges.size());
+//     size_t index = 0;
 
-    using IdxPolyline = typename geometry::tet::PiecewiseLinearComplex<Point3D<coor_t> >::IdxPolyLine;
-    for(const auto & edge : edges){
-        plc.surfaces[index].faces.push_back(IdxPolyline{ edge.v1(), edge.v2()});
-        index++;
-    }
-    return geometry::tet::WritePlcToNodeAndEdgeFiles(filename, plc);
-}
-
-bool MeshFlow3D::LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos)
-{
-    return MeshFileUtility3D::LoadLayerStackInfos(filename, infos);
-}
-
+//     using IdxPolyline = typename geometry::tet::PiecewiseLinearComplex<Point3D<coor_t> >::IdxPolyLine;
+//     for(const auto & edge : edges){
+//         plc.surfaces[index].faces.push_back(IdxPolyline{ edge.v1(), edge.v2()});
+//         index++;
+//     }
+//     return geometry::tet::WritePlcToNodeAndEdgeFiles(filename, plc);
+// }
 bool MeshFlow3D::Tetrahedralize(const Point3DContainer & points, const std::list<std::vector<size_t> > & faces, const std::list<IndexEdge> & edges, TetrahedronData & tet)
 {
     Tetrahedralizator tetrahedralizator(tet);
     return tetrahedralizator.Tetrahedralize(points, faces, edges);
 }
-
 
 bool MeshFlow3D::MergeTetrahedrons(TetrahedronData & master, TetrahedronDataVec & tetVec)
 {
@@ -495,9 +486,19 @@ bool MeshFlow3D::MergeTetrahedrons(TetrahedronData & master, TetrahedronDataVec 
     return true;
 }
 
-bool MeshFlow3D::ExportVtkFile(const std::string & filename, const TetrahedronData & tet)
+bool MeshFlow3D::ExportResultFile(const std::string & filename,  FileFormat format, const TetrahedronData & tet)
 {
-    return MeshFileUtility3D::ExportVtkFile(filename, tet);
+    switch (format) {
+        case FileFormat::VTK : {
+            std::string vtk = filename + ".vtk";
+            return io::ExportVtkFile(vtk, tet);
+        }
+        case FileFormat::MSH : {
+            std::string msh = filename + ".msh";
+            return io::ExportMshFile(msh, tet);
+        }
+        default : return false;
+    }
 }
 
 bool MeshFlow3D::SliceOverheightModels(std::vector<MeshSketchModel> & models, float_t ratio)
@@ -683,56 +684,126 @@ std::unique_ptr<Point2DContainer> MeshFlow3D::AddPointsFromBalancedQuadTree(std:
     return addin;
 }
 
-bool MeshFileUtility3D::LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos)
+bool MeshFlow3DMT::CleanGeometries(StackLayerPolygons & polygons, coor_t distance, size_t threads)
 {
-    std::ifstream in(filename);
-    if(!in.is_open()) return false;
+    thread::ThreadPool pool(threads);
+    for(size_t i = 0; i < polygons.size(); ++i)
+        pool.Submit(std::bind(&MeshFlow3D::CleanLayerGeometries, std::ref(*polygons[i]), distance));        
     
-    char sp(32);
-    std::string tmp;
-    size_t line = 0;
-
-    size_t layers;
-    double scale = 1.0;
-    double elevation, thickness;
-    while(!in.eof()){
-        line++;
-        std::getline(in, tmp);
-        if(tmp.empty()) continue;
-
-        auto items = parser::Split(tmp, sp);
-        if(items.size() < 1) return false;
-        layers = std::stol(items[0]);
-        if(items.size() > 1) scale = std::stod(items[1]);
-        break;
-    }
-
-    infos.clear();
-    infos.reserve(layers);
-    while(!in.eof()){
-        line++;
-        std::getline(in, tmp);
-        if(tmp.empty()) continue;
-
-        auto items = parser::Split(tmp, sp);
-        if(items.size() < 2) return false;
-        elevation = std::stod(items[0]) * scale;
-        thickness = std::stod(items[1]) * scale;
-        infos.push_back(StackLayerInfo{});
-        infos.back().elevation = elevation;
-        infos.back().thickness = thickness;
-    }
-    in.close();
-    if(infos.size() > 1){
-        for(size_t i = 0; i < infos.size() - 1; ++i){
-            infos[i].thickness = infos[i].elevation - infos[i + 1].elevation;
-            if(infos[i].thickness <= 0) return false;
-        }
-    }
-    return infos.size() == layers;
+    return true;
 }
 
-bool MeshFileUtility3D::ExportVtkFile(const std::string & vtk, const TetrahedronData & t)
+bool MeshFlow3DMT::ExtractModelsIntersections(std::vector<StackLayerModel * > & models, size_t threads)
 {
-    return geometry::tet::WriteVtkFile(vtk, t);
+    thread::ThreadPool pool(threads);
+    for(size_t i = 0; i < models.size(); ++i)
+        pool.Submit(std::bind(&MeshFlow3D::ExtractModelIntersections, std::ref(*(models[i]))));
+    return true;
 }
+
+// bool MeshFlow3DMT::ExtractInterfaceIntersections(StackLayerModel & model, size_t threads)
+// {
+//     if(model.hasSubModels()){
+//         bool res = true;
+//         for(size_t i = 0; i < 4; ++i)
+//             res = res && ExtractInterfaceIntersections((*model.subModels[i]), threads);
+//         return res;
+//     }
+//     else{
+//         if(nullptr == model.inGeoms) return false;
+//         model.intersections.reset(new InterfaceIntersections);
+//         return ExtractInterfaceIntersections(*model.inGeoms, *model.intersections, threads);
+//     }
+// }
+
+// bool MeshFlow3DMT::ExtractInterfaceIntersections(const StackLayerPolygons & polygons, InterfaceIntersections & intersections, size_t threads)
+// {
+//     intersections.clear();
+//     if(polygons.size() <= 1) return false;
+
+//     auto size = polygons.size() - 1;
+//     intersections.resize(size);
+
+//     thread::ThreadPool pool(threads);
+//     std::vector<std::future<bool> > futures(size);
+//     for(size_t i = 0; i < size; ++i){
+//         futures[i] = pool.Submit(std::bind(&MeshFlow3D::ExtractInterfaceIntersection,
+//                                  std::ref(polygons[i]), std::ref(polygons[i + 1]), std::ref(intersections[i])));        
+//     }      
+    
+//     bool res = true;
+//     for(size_t i = 0; i < futures.size(); ++i)
+//         res = res && futures[i].get();
+
+//     return res;
+// }
+
+bool MeshFlow3DMT::SplitOverlengthEdges(const StackLayerModel & model, coor_t maxLength, size_t threads)
+{
+    if(model.hasSubModels()){
+        bool res = true;
+        for(size_t i = 0; i < 4; ++i)
+            res = res && SplitOverlengthEdges((*model.subModels[i]), maxLength, threads);
+        return res;
+    }
+    else return SplitOverlengthEdges(*model.inGeoms, *model.intersections, maxLength, threads);
+}
+
+bool MeshFlow3DMT::SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength, size_t threads)
+{
+    if(0 == maxLength) return true;
+    thread::ThreadPool pool(threads);
+
+    pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthPolygons, std::ref(*(polygons.front())), maxLength));
+    pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthPolygons, std::ref(*(polygons.back())), maxLength));
+
+    for(size_t i = 0; i < intersections.size(); ++i){
+        pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthSegments, std::ref(*(intersections[i])), maxLength));
+    }        
+    return true;
+}
+
+bool MeshFlow3DMT::GenerateTetrahedronVecFromSketchModels(std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec, size_t threads)
+{
+    auto size = models.size();
+    tetVec.resize(size);
+    thread::ThreadPool pool(threads);
+    for(size_t i = 0; i < size; ++i)
+        pool.Submit(std::bind(&MeshFlow3D::GenerateTetrahedronDataFromSketchModel, std::ref(models[i]), std::ref(tetVec[i])));        
+    
+    return true;
+}
+
+
+// bool MeshFlow3DMT::AddGradePointsForMeshModel(MeshSketchModel & model, size_t threshold, size_t threads)
+// {
+//     thread::ThreadPool pool(threads);
+//     std::vector<std::future<bool> > futures(model.layers.size());
+//     for(size_t i = 0; i < model.layers.size(); ++i){
+//         futures[i] = pool.Submit(std::bind(&MeshFlow3D::AddGradePointsForMeshLayer, std::ref(model.layers[i]), threshold));
+//     }
+
+//     bool res = true;
+//     for(size_t i = 0; i < futures.size(); ++i)
+//         res = res && futures[i].get();
+
+//     return res;
+// }
+
+// bool MeshFlow3DMT::GenerateTetrahedronsFromSketchModel(const MeshSketchModel & model, TetrahedronDataVec & tetVec, size_t threads)
+// {
+//     thread::ThreadPool pool(threads);
+    
+//     tetVec.resize(model.layers.size());
+//     std::vector<std::future<bool> > futures(model.layers.size());
+//     for(size_t i = 0; i < model.layers.size(); ++i){
+//         futures[i] = pool.Submit(std::bind(&MeshFlow3D::GenerateTetrahedronsFromSketchLayer,
+//                                  std::ref(model.layers[i]), std::ref(tetVec[i])));
+//     }    
+
+//     bool res = true;
+//     for(size_t i = 0; i < futures.size(); ++i)
+//         res = res && futures[i].get();
+
+//     return res;
+// }

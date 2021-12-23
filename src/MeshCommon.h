@@ -36,7 +36,6 @@ struct Mesh2Ctrl
     coor_t tolerance = 0;
     coor_t maxEdgeLen = 0;
     coor_t minEdgeLen = 100;
-    float_t scale2Int = 1e3;
     float_t minAlpha = math::Rad(15);
 };
 
@@ -66,6 +65,8 @@ using PolygonWithHolesContainer = std::list<PolygonWithHoles2D<coor_t> >;
 using StackLayerInfos = std::vector<StackLayerInfo>;
 using StackLayerPolygons = std::vector<SPtr<PolygonContainer> >;
 using InterfaceIntersections = std::vector<SPtr<Segment2DContainer> >;
+
+inline constexpr size_t maxThreads = std::numeric_limits<size_t>::max();
 
 }//namespace emesh
 #endif//EMESH_MESHCOMMON_H

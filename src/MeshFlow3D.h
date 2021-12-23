@@ -38,11 +38,11 @@ public:
     static bool GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet);
     static bool ExtractTopology(const MeshSketchLayer & layer, Point3DContainer & points, std::list<IndexFace> & faces, std::list<IndexEdge> & edges);
     static bool SplitOverlengthEdges(Point3DContainer & points, std::list<IndexEdge> & edges, coor_t maxLength, bool surfaceOnly = true);
-    static bool WriteNodeAndEdgeFiles(const std::string & filename, const Point3DContainer & points, const std::list<IndexEdge> & edges);
+    // static bool WriteNodeAndEdgeFiles(const std::string & filename, const Point3DContainer & points, const std::list<IndexEdge> & edges);
     static bool LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos);
     static bool Tetrahedralize(const Point3DContainer & points, const std::list<std::vector<size_t> > & faces, const std::list<IndexEdge> & edges, TetrahedronData & tet);
     static bool MergeTetrahedrons(TetrahedronData & master, TetrahedronDataVec & tetVec);
-    static bool ExportVtkFile(const std::string & filename, const TetrahedronData & tet);
+    static bool ExportResultFile(const std::string & filename,  FileFormat format, const TetrahedronData & tet);
 
     static bool SliceOverheightLayers(std::list<MeshSketchLayer> & layers, float_t ratio);
     static void SplitOverlengthIntersections(InterfaceIntersections & intersections, coor_t maxLength);
@@ -56,12 +56,18 @@ public:
     static std::unique_ptr<Point2DContainer> AddPointsFromBalancedQuadTree(std::list<Point2D<coor_t> * > points, size_t threshold);
 };
 
-class MeshFileUtility3D
+class MeshFlow3DMT
 {
 public:
-    //3d
-    static bool LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos);
-    static bool ExportVtkFile(const std::string & vtk, const TetrahedronData & t);
+    static bool CleanGeometries(StackLayerPolygons & polygons, coor_t distance, size_t threads = maxThreads);
+    static bool ExtractModelsIntersections(std::vector<StackLayerModel * > & models, size_t threads = maxThreads);
+    // static bool ExtractInterfaceIntersections(StackLayerModel & model, size_t threads = maxThreads);
+    // static bool ExtractInterfaceIntersections(const StackLayerPolygons & polygons, InterfaceIntersections & intersections, size_t threads = maxThreads);
+    static bool SplitOverlengthEdges(const StackLayerModel & model, coor_t maxLength, size_t threads = maxThreads); 
+    static bool SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength, size_t threads = maxThreads);
+    static bool GenerateTetrahedronVecFromSketchModels(std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec, size_t threads = maxThreads);
+    // static bool AddGradePointsForMeshModel(MeshSketchModel & model, size_t threshold, size_t threads = maxThreads);
+    // static bool GenerateTetrahedronsFromSketchModel(const MeshSketchModel & model, TetrahedronDataVec & tetVec, size_t threads = maxThreads);
 };
 
 }//namespace emesh

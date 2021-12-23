@@ -1,6 +1,6 @@
 #include "Mesher3D.h"
+#include "generic/tools/FileSystem.hpp"
 #include "MeshFlow3D.h"
-#include "MeshFlowMT.h"
 using namespace generic;
 using namespace emesh;
 
@@ -32,13 +32,9 @@ Mesher3D::Mesher3D()
     options.projName = projName;//wbtest
 }
 
-Mesher3D::~Mesher3D()
-{
-}
-
 bool Mesher3D::Run()
 {
-    if(options.workPath.empty() || options.projName.empty()) return false;
+    if(GetProjFileName().empty()) return false;
 
     InitLogger();
     
@@ -46,6 +42,12 @@ bool Mesher3D::Run()
 
     CloseLogger();
     return res;
+}
+
+std::string Mesher3D::GetProjFileName() const
+{
+    if(options.workPath.empty() || options.projName.empty()) return std::string{};
+    return options.workPath + GENERIC_FOLDER_SEPS + options.projName;
 }
 
 bool Mesher3D::RunTest()
@@ -156,9 +158,9 @@ bool Mesher3D::RunGenerateMesh()
 
     log::Info("start write layer mesh result files...");
     for(size_t i = 0; i < tetVec->size(); ++i){
-        std::string filename = options.workPath + GENERIC_FOLDER_SEPS + options.projName + "_" + std::to_string(i + 1) + ".vtk";
-        MeshFlow3D::ExportVtkFile(filename, tetVec->at(i));
-    }
+        std::string layerFile = filename + "_" + std::to_string(i + 1);
+        MeshFlow3D::ExportResultFile(layerFile, options.oFileFormat, tetVec->at(i));
+    }//wbtest
 
     //
     log::Info("start merge mesh results...");
@@ -170,8 +172,7 @@ bool Mesher3D::RunGenerateMesh()
     }
 
     log::Info("start write final mesh result file...");
-    std::string vtkFile = filename + ".vtk";
-    MeshFlow3D::ExportVtkFile(vtkFile, *db.tetras);
+    MeshFlow3D::ExportResultFile(filename, options.oFileFormat, *db.tetras);
 
     log::Info("total nodes: %1%", db.tetras->vertices.size());
     log::Info("total elements: %1%", db.tetras->tetrahedrons.size());
@@ -179,24 +180,3 @@ bool Mesher3D::RunGenerateMesh()
     return true;
 }
 
-void Mesher3D::InitLogger()
-{
-    std::string dbgFile = options.workPath + GENERIC_FOLDER_SEPS + options.projName + ".dbg";
-    std::string logFile = options.workPath + GENERIC_FOLDER_SEPS + options.projName + ".log";
-
-    auto traceSink = std::make_shared<log::StreamSinkMT>(std::cout);
-    auto debugSink = std::make_shared<log::FileSinkMT>(dbgFile);
-    auto infoSink  = std::make_shared<log::FileSinkMT>(logFile);
-    traceSink->SetLevel(log::Level::Trace);
-    debugSink->SetLevel(log::Level::Debug);
-    infoSink->SetLevel(log::Level::Info);
-
-    auto logger = log::MultiSinksLogger("eMesh", {traceSink, debugSink, infoSink});
-    logger->SetLevel(log::Level::Trace);
-    log::SetDefaultLogger(logger);
-}
-
-void Mesher3D::CloseLogger()
-{
-    log::ShutDown();
-}

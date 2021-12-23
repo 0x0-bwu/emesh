@@ -5,11 +5,11 @@ program_name ='../build/eMesher.exe'
 
 source_files = [
     'Mesh3D.cpp',
+    'Mesher.cpp',
     'Mesher2D.cpp',
     'Mesher3D.cpp',
-    'MeshFileUtility.cpp',
+    'MeshFlow2D.cpp',
     'MeshFlow3D.cpp',
-    'MeshFlowMT.cpp',
     'MeshIO.cpp',
     'Tetrahedralizator.cpp',
     '../thirdpart/tetgen/predicates.cxx',

@@ -1,6 +1,7 @@
 #include "Mesher2D.h"
 #include "Mesher3D.h"
 #include "generic/tools/ProgramOptions.hpp"
+#include "generic/tools/FileSystem.hpp"
 #include "generic/tools/Format.hpp"
 #include "generic/tools/Tools.hpp"
 #include <iostream>

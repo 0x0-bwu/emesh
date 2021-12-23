@@ -1,74 +1,43 @@
 #include "Mesher2D.h"
-#include "generic/geometry/TriangulationRefinement.hpp"
-#include "generic/geometry/BoostPolygonRegister.hpp"
-#include "generic/tree/QuadTreeUtilityMT.hpp"
-#include "generic/geometry/HashFunction.hpp"
-#include "generic/geometry/Transform.hpp"
-#include "generic/geometry/Topology.hpp"
-#include "generic/geometry/Utility.hpp"
 #include "generic/tools/FileSystem.hpp"
-#include "generic/tools/Tools.hpp"
-#include "MeshFileUtility.h"
-#include <memory>
-#include <ctime>
+#include "generic/tools/Log.hpp"
+#include "MeshFlow2D.h"
+#include "MeshIO.h"
 using namespace generic;
 using namespace emesh;
-Mesher2D::Mesher2D()
-{
-}
-
-Mesher2D::~Mesher2D()
-{
-}
-
 bool Mesher2D::Run()
-{
-    if(options.workPath.empty() || options.projName.empty()) return false;
-    
+{ 
+    if(GetProjFileName().empty()) return false;
+
     InitLogger();
     
-    auto res = RunTasks();
+    bool res = true;
+    res = res && RunGenerateMesh();
+    res = res && RunMeshEvaluation();
 
     CloseLogger();
     return res;
 }
 
-bool Mesher2D::RunTasks()
+bool Mesher2D::RunTest()
 {
-    if(!db.tasks) {
-        log::Info("no task need to do!");
-        return false;
-    }
+    return false;
+}
 
-    bool res(false);
-    while(!db.tasks->empty()){
-        auto task = db.tasks->front();
-        db.tasks->pop();
-        if(task == MeshTask::MeshGeneration) res = RunGenerateMesh();
-        if(task == MeshTask::MeshEvaluation) res = RunMeshEvaluation();
-        if(!res) return false;
-    }
-    return true;
+std::string Mesher2D::GetProjFileName() const
+{
+    if(options.workPath.empty() || options.projName.empty()) return std::string{};
+    return options.workPath + GENERIC_FOLDER_SEPS + options.projName;
 }
 
 bool Mesher2D::RunGenerateMesh()
 {
     bool res(true);
-    //
-    std::string ctrlFile = options.workPath + GENERIC_FOLDER_SEPS + "mesh_input.txt";
-    if(filesystem::FileExists(ctrlFile)){
-        log::Info("find input mesh ctrl file %1%", ctrlFile);
-
-        res = MeshFileUtility::LoadMeshCtrlFile(ctrlFile, options.meshCtrl);
-        if(res){ log::Info("load mesh ctrl file successfully!"); }
-        else { log::Info("fail to load paras from mesh ctrl file, use default paras instead."); }
-    }
-
+    std::string filename = GetProjFileName();
     //
     log::Info("start to load geometries from file...");
     db.inGeoms.reset(new PolygonContainer);
-    std::string filename = options.workPath + GENERIC_FOLDER_SEPS + options.projName;
-    res = MeshFlow2D::LoadGeometryFiles(filename, options.iFileFormat, options.meshCtrl.scale2Int, *db.inGeoms);
+    res = MeshFlow2D::LoadGeometryFiles(filename, options.iFileFormat, *db.inGeoms);
     if(!res){
         log::Error("fail to load geometry from %1%", filename);
         return false;
@@ -162,7 +131,7 @@ bool Mesher2D::RunGenerateMesh()
     }
     
     log::Info("start to write mesh result...");
-    res = MeshFlow2D::ExportMeshResult(filename, FileFormat::MSH, *db.triangulation, 1.0 / options.meshCtrl.scale2Int);
+    res = MeshFlow2D::ExportMeshResult(filename, options.oFileFormat, *db.triangulation);
     if(!res){
         log::Error("fail to write mesh result!");
         return false;
@@ -176,7 +145,7 @@ bool Mesher2D::RunMeshEvaluation()
 {
     if(!db.triangulation){
         if(options.iFileFormat == FileFormat::MSH){
-            std::string mshFile = options.workPath + GENERIC_FOLDER_SEPS + options.projName + ".msh";
+            std::string mshFile = GetProjFileName() + ".msh";
             log::Info("loading mesh data from %1%", mshFile);
             if(!filesystem::FileExists(mshFile)){
                 log::Error("file %1% not exist!", mshFile);
@@ -184,7 +153,7 @@ bool Mesher2D::RunMeshEvaluation()
             }
 
             db.triangulation.reset(new TriangulationData);
-            auto res = MeshFileUtility::ImportMshFile(mshFile, *db.triangulation, options.meshCtrl.scale2Int);
+            auto res = io::ImportMshFile(mshFile, *db.triangulation);
             if(!res){
                 log::Error("fail to load mesh from %1%", mshFile);
                 return false;
@@ -198,217 +167,13 @@ bool Mesher2D::RunMeshEvaluation()
     }
 
     log::Info("start to generate mesh report...");
-    std::string filename = options.workPath + GENERIC_FOLDER_SEPS + options.projName + ".rpt";
-    auto res = MeshFlow2D::GenerateReport(filename, *db.triangulation, 1.0 / options.meshCtrl.scale2Int);
+    std::string rptFile = GetProjFileName() + ".rpt";
+    auto res = MeshFlow2D::GenerateReport(rptFile, *db.triangulation);
     if(!res){
         log::Error("fail to generate mesh report");
         return false;
     }
 
-    log::Info("report generated: %1%", filename);
+    log::Info("report generated: %1%", rptFile);
     return true;
-}
-
-void Mesher2D::InitLogger()
-{
-    std::string dbgFile = options.workPath + GENERIC_FOLDER_SEPS + options.projName + ".dbg";
-    std::string logFile = options.workPath + GENERIC_FOLDER_SEPS + options.projName + ".log";
-
-    auto traceSink = std::make_shared<log::StreamSinkMT>(std::cout);
-    auto debugSink = std::make_shared<log::FileSinkMT>(dbgFile);
-    auto infoSink  = std::make_shared<log::FileSinkMT>(logFile);
-    traceSink->SetLevel(log::Level::Trace);
-    debugSink->SetLevel(log::Level::Debug);
-    infoSink->SetLevel(log::Level::Info);
-
-    auto logger = log::MultiSinksLogger("eMesh", {traceSink, debugSink, infoSink});
-    logger->SetLevel(log::Level::Trace);
-    log::SetDefaultLogger(logger);
-}
-
-void Mesher2D::CloseLogger()
-{
-    log::ShutDown();
-}
-
-bool MeshFlow2D::LoadGeometryFiles(const std::string & filename, FileFormat format, float_t scale, PolygonContainer & polygons)
-{
-    try {
-        switch (format) {
-            case FileFormat::DomDmc : {
-                std::string dom = filename + ".dom";
-                std::string dmc = filename + ".dmc";
-                return MeshFileUtility::LoadDomDmcFiles(dom, dmc, scale, polygons);
-            }
-            case FileFormat::WKT : {
-                std::string wkt = filename + ".wkt";
-                return MeshFileUtility::LoadWktFile(wkt, scale, polygons);
-            }
-            default : return false;
-        }
-    }
-    catch (...) { return false; }
-    return true;
-}
-
-bool MeshFlow2D::ExtractIntersections(const PolygonContainer & polygons, std::vector<Segment2D<coor_t> > & segments)
-{
-    segments.clear();
-    std::list<Segment2D<coor_t> > temp;
-    for(const auto & polygon : polygons){
-        size_t size = polygon.Size();
-        for(size_t i = 0; i < size; ++i){
-            size_t j = (i + 1) % size;
-            temp.emplace_back(Segment2D<coor_t>(polygon[i], polygon[j]));
-        }
-    }
-    boost::polygon::intersect_segments(segments, temp.begin(), temp.end());
-    return true;
-}
-
-bool MeshFlow2D::ExtractTopology(const std::vector<Segment2D<coor_t> > & segments, std::vector<Point2D<coor_t> > & points, std::list<IndexEdge> & edges)
-{
-    points.clear();
-    edges.clear();
-    using EdgeSet = topology::UndirectedIndexEdgeSet;
-    using PointIdxMap = std::unordered_map<Point2D<coor_t>, size_t, PointHash<coor_t> >;
-    
-    EdgeSet edgeSet;
-    PointIdxMap pointIdxMap;
-
-    auto getIndex = [&pointIdxMap, &points](const Point2D<coor_t> & p) mutable
-    {
-        if(!pointIdxMap.count(p)){
-            pointIdxMap.insert(std::make_pair(p, points.size()));
-            points.push_back(p);
-        }
-        return pointIdxMap.at(p);
-    };
-
-    points.reserve(2 * segments.size());
-    for(const auto & segment : segments){
-        IndexEdge e(getIndex(segment[0]), getIndex(segment[1]));
-        if(edgeSet.count(e)) continue;
-        edgeSet.insert(e);
-        edges.emplace_back(std::move(e));
-    }
-    return true;   
-}
-
-bool MeshFlow2D::MergeClosePointsAndRemapEdge(std::vector<Point2D<coor_t> > & points, std::list<IndexEdge> & edges, coor_t tolerance)
-{
-    if(tolerance > 0) RemoveDuplicatesAndRemapEdges(points, edges, tolerance);
-    return true;
-}
-
-bool MeshFlow2D::SplitOverlengthEdges(std::vector<Point2D<coor_t> > & points, std::list<IndexEdge> & edges, coor_t maxLength)
-{
-    if(0 == maxLength) return true;
-    coor_t maxLenSq = maxLength * maxLength;
-
-    auto lenSq = [&points](const IndexEdge & e) { return DistanceSq(points[e.v1()], points[e.v2()]); };
-    auto split = [&points](const IndexEdge & e) mutable
-    {
-        size_t index = points.size();
-        points.push_back((points[e.v1()] + points[e.v2()]) * 0.5);
-        return std::make_pair(IndexEdge(e.v1(), index), IndexEdge(index, e.v2()));
-    };
-
-    std::list<IndexEdge> tmp;
-    while(edges.size()){
-        IndexEdge e = edges.front();
-        edges.pop_front();
-        if(maxLenSq < lenSq(e)){
-            auto added = split(e);
-            edges.emplace_front(std::move(added.first));
-            edges.emplace_front(std::move(added.second));
-        }
-        else tmp.emplace_back(std::move(e));
-    }
-
-    std::swap(edges, tmp);
-    return true;
-}
-
-bool MeshFlow2D::AddPointsFromBalancedQuadTree(const Polygon2D<coor_t> & outline, std::vector<Point2D<coor_t> > & points, size_t threshold)
-{
-
-    struct PointExtent
-    {
-        Box2D<coor_t> operator()(const Point2D<coor_t> & point) const
-        {
-            return Box2D<coor_t>(point, point);
-        }
-    };
-    
-    std::list<Point2D<coor_t> * > objs;
-    for(size_t i = 0; i < points.size(); ++i)
-        objs.push_back(&points[i]);
-    
-    threshold = std::max(size_t(1), threshold);
-    Box2D<coor_t> bbox = Extent(outline);
-    using Tree = tree::QuadTree<coor_t, Point2D<coor_t>, PointExtent>;
-    using Node = typename Tree::QuadNode;
-    using TreeBuilder = tree::QuadTreeBuilderMT<Point2D<coor_t>, Tree>;
-    Tree tree(bbox);
-    TreeBuilder builder(tree);
-    builder.Build(objs, threshold);
-
-    tree.Balance();
-
-    std::list<Node * > leafNodes;
-    Tree::GetAllLeafNodes(&tree, leafNodes);
-
-    for(auto node : leafNodes){
-        if(node->GetObjs().size() > 0) continue;
-        const auto & box = node->GetBBox();
-        Point2D<coor_t> ct = box.Center().Cast<coor_t>();
-        if(Contains(outline, ct))
-            points.emplace_back(std::move(ct));
-    }
-    return true;
-}
-
-bool MeshFlow2D::TriangulatePointsAndEdges(const std::vector<Point2D<coor_t> > & points, const std::list<IndexEdge> & edges, Triangulation<Point2D<coor_t> > & tri)
-{
-    tri.Clear();
-    try {
-        Triangulator2D<coor_t> triangulator(tri);
-        triangulator.InsertVertices(points.begin(), points.end(), [](const Point2D<coor_t> & p){ return p[0]; }, [](const Point2D<coor_t> & p){ return p[1]; });
-        triangulator.InsertEdges(edges.begin(), edges.end(), [](const IndexEdge & e){ return e.v1(); }, [](const IndexEdge & e){ return e.v2(); });
-        triangulator.EraseOuterTriangles();
-    }
-    catch (...) {
-        tri.Clear();
-        return false;
-    }
-    return true;
-}
-
-bool MeshFlow2D::TriangulationRefinement(Triangulation<Point2D<coor_t> > & triangulation, float_t minAlpha, coor_t minLen, coor_t maxLen, size_t iteration)
-{
-    // ChewSecondRefinement2D<coor_t> refinement(triangulation);
-    JonathanRefinement2D<coor_t> refinement(triangulation);
-    refinement.SetParas(minAlpha, minLen, maxLen);
-    refinement.Refine(iteration);
-    refinement.ReallocateTriangulation();
-    return true;
-}
-
-bool MeshFlow2D::ExportMeshResult(const std::string & filename, FileFormat format, const Triangulation<Point2D<coor_t> > & triangulation, float_t scale)
-{
-    switch (format) {
-        case FileFormat::MSH : {
-            std::string msh = filename + ".msh";
-            return MeshFileUtility::ExportMshFile(msh, triangulation, scale);
-        }
-        default : return false;
-    }
-}
-
-bool MeshFlow2D::GenerateReport(const std::string & filename, const Triangulation<Point2D<coor_t> > & triangulation, float_t scale)
-{
-    TriangleEvaluator<Point2D<coor_t> > evaluator(triangulation);
-    auto evaluation = evaluator.Report();
-    return MeshFileUtility::ExportReportFile(filename, evaluation, scale, false);
 }

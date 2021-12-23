@@ -8,6 +8,16 @@
 #include <array>
 namespace emesh {
 
+struct Mesh3Options
+{
+    size_t threads;
+    Mesh3Ctrl meshCtrl;
+    std::string workPath;
+    std::string projName;
+    FileFormat iFileFormat = FileFormat::WKT;
+    FileFormat oFileFormat = FileFormat::VTK;
+};
+
 class MeshSketchLayer
 {
 public:
@@ -167,6 +177,17 @@ private:
 private:
     TetrahedronData & m_data;
     LayerPointIndexMap m_indexMap;
+};
+
+struct Mesh3DB : private boost::noncopyable
+{
+    Mesh3DB() = default;
+
+    template<typename T>
+    using Data = std::unique_ptr<T>;
+    
+    Data<StackLayerModel>  model;
+    Data<TetrahedronData>  tetras;
 };
 
 }//namespace emesh

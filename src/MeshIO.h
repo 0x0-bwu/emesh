@@ -1,13 +1,20 @@
 #ifndef EMESH_IO_MESHIO_H
 #define EMESH_IO_MESHIO_H
-#include "MeshCommon.h"
+#include "Mesh2D.h"
+#include "Mesh3D.h"
 #include <string>
 #include <map>
 namespace emesh {
 namespace io {
 
-bool LoadDomDmcFiles(const std::string & dom, const std::string & dmc, std::map<int, SPtr<PolygonContainer> > & results);
-bool LoadWktFile(const std::string & wkt, PolygonWithHolesContainer & pwhs);
+bool ImportLayerStackFile(const std::string & stack, StackLayerInfos & infos);
+bool ImportDomDmcFiles(const std::string & dom, const std::string & dmc, std::map<int, SPtr<PolygonContainer> > & results);
+bool ImportWktFile(const std::string & wkt, PolygonWithHolesContainer & pwhs);
+bool ImportMshFile(const std::string & msh, Triangulation<Point2D<coor_t> > & triangulation);
+bool ExportMshFile(const std::string & msh, const Triangulation<Point2D<coor_t> > & triangulation);
+bool ExportReportFile(const std::string & rpt, const MeshEvaluation2D & evaluation, bool pureText = false);
+bool ExportVtkFile(const std::string & vtk, const TetrahedronData & tet);
+bool ExportMshFile(const std::string & msh, const TetrahedronData & tet);
 
 }//namespace io
 }//namespace emesh
