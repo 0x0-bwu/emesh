@@ -1,19 +1,10 @@
 #ifndef EMESH_MESHFLOW3D_H
 #define EMESH_MESHFLOW3D_H
 #include "Mesh3D.h"
-#include <memory>
 namespace emesh {
 
 class MeshFlow3D
 {
-    friend class Mesher3D;
-    struct PointExtent
-    {
-        Box2D<coor_t> operator()(const Point2D<coor_t> & point) const
-        {
-            return Box2D<coor_t>(point, point);
-        }
-    };
 public:
     static bool LoadGeometryFiles(const std::string & filename, FileFormat format, StackLayerPolygons & polygons, StackLayerInfos & infos);
     static bool CleanGeometries(StackLayerPolygons & polygons, coor_t distance);

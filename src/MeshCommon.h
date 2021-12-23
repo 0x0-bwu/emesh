@@ -52,6 +52,19 @@ struct StackLayerInfo
     coor_t thickness;
 };
 
+struct PointExtent
+{
+    Box2D<coor_t> operator() (const Point2D<coor_t> & point) const
+    {
+        return Box2D<coor_t>(point, point);
+    }
+
+    Box3D<coor_t> operator() (const Point3D<coor_t> & point) const
+    {
+        return Box3D<coor_t>(point, point);
+    }
+};
+
 using MeshTasks = std::queue<MeshTask>;
 using IndexEdgeList = std::list<IndexEdge>;
 using Point2DContainer = std::vector<Point2D<coor_t> >;

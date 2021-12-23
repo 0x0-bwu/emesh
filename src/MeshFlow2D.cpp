@@ -3,13 +3,10 @@
 #include "generic/tree/QuadTreeUtilityMT.hpp"
 #include "generic/geometry/HashFunction.hpp"
 #include "generic/geometry/Transform.hpp"
-#include "generic/geometry/Topology.hpp"
 #include "generic/geometry/Utility.hpp"
 #include "generic/tools/FileSystem.hpp"
 #include "generic/tools/Tools.hpp"
 #include "MeshIO.h"
-#include <memory>
-#include <ctime>
 using namespace generic;
 using namespace emesh;
 bool MeshFlow2D::LoadGeometryFiles(const std::string & filename, FileFormat format, PolygonContainer & polygons)
@@ -48,7 +45,7 @@ bool MeshFlow2D::LoadGeometryFiles(const std::string & filename, FileFormat form
     return true;
 }
 
-bool MeshFlow2D::ExtractIntersections(const PolygonContainer & polygons, std::vector<Segment2D<coor_t> > & segments)
+bool MeshFlow2D::ExtractIntersections(const PolygonContainer & polygons, Segment2DContainer & segments)
 {
     segments.clear();
     std::list<Segment2D<coor_t> > temp;
@@ -63,7 +60,7 @@ bool MeshFlow2D::ExtractIntersections(const PolygonContainer & polygons, std::ve
     return true;
 }
 
-bool MeshFlow2D::ExtractTopology(const std::vector<Segment2D<coor_t> > & segments, std::vector<Point2D<coor_t> > & points, std::list<IndexEdge> & edges)
+bool MeshFlow2D::ExtractTopology(const Segment2DContainer & segments, Point2DContainer & points, std::list<IndexEdge> & edges)
 {
     points.clear();
     edges.clear();
@@ -89,16 +86,19 @@ bool MeshFlow2D::ExtractTopology(const std::vector<Segment2D<coor_t> > & segment
         edgeSet.insert(e);
         edges.emplace_back(std::move(e));
     }
+    points.shrink_to_fit();
     return true;   
 }
 
-bool MeshFlow2D::MergeClosePointsAndRemapEdge(std::vector<Point2D<coor_t> > & points, std::list<IndexEdge> & edges, coor_t tolerance)
+
+bool MeshFlow2D::MergeClosePointsAndRemapEdge(Point2DContainer & points, std::list<IndexEdge> & edges, coor_t tolerance)
 {
-    if(tolerance > 0) RemoveDuplicatesAndRemapEdges(points, edges, tolerance);
-    return true;
+    if(tolerance > 0)
+        geometry::tri::RemoveDuplicatesAndRemapEdges(points, edges, tolerance);
+    return true; 
 }
 
-bool MeshFlow2D::SplitOverlengthEdges(std::vector<Point2D<coor_t> > & points, std::list<IndexEdge> & edges, coor_t maxLength)
+bool MeshFlow2D::SplitOverlengthEdges(Point2DContainer & points, std::list<IndexEdge> & edges, coor_t maxLength)
 {
     if(0 == maxLength) return true;
     coor_t maxLenSq = maxLength * maxLength;
@@ -127,17 +127,8 @@ bool MeshFlow2D::SplitOverlengthEdges(std::vector<Point2D<coor_t> > & points, st
     return true;
 }
 
-bool MeshFlow2D::AddPointsFromBalancedQuadTree(const Polygon2D<coor_t> & outline, std::vector<Point2D<coor_t> > & points, size_t threshold)
-{
-
-    struct PointExtent
-    {
-        Box2D<coor_t> operator()(const Point2D<coor_t> & point) const
-        {
-            return Box2D<coor_t>(point, point);
-        }
-    };
-    
+bool MeshFlow2D::AddPointsFromBalancedQuadTree(const Polygon2D<coor_t> & outline, Point2DContainer & points, size_t threshold)
+{    
     std::list<Point2D<coor_t> * > objs;
     for(size_t i = 0; i < points.size(); ++i)
         objs.push_back(&points[i]);
@@ -166,7 +157,7 @@ bool MeshFlow2D::AddPointsFromBalancedQuadTree(const Polygon2D<coor_t> & outline
     return true;
 }
 
-bool MeshFlow2D::TriangulatePointsAndEdges(const std::vector<Point2D<coor_t> > & points, const std::list<IndexEdge> & edges, Triangulation<Point2D<coor_t> > & tri)
+bool MeshFlow2D::TriangulatePointsAndEdges(const Point2DContainer & points, const std::list<IndexEdge> & edges, Triangulation<Point2D<coor_t> > & tri)
 {
     tri.Clear();
     try {
