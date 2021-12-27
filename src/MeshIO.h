@@ -11,6 +11,7 @@ bool ImportLayerStackFile(const std::string & stack, StackLayerInfos & infos);
 bool ImportDomDmcFiles(const std::string & dom, const std::string & dmc, std::map<int, SPtr<PolygonContainer> > & results);
 bool ImportWktFile(const std::string & wkt, PolygonWithHolesContainer & pwhs);
 bool ImportMshFile(const std::string & msh, Triangulation<Point2D<coor_t> > & triangulation);
+bool ImportNodeAndEdges(const std::string & ne, Point3DContainer & points, std::list<IndexEdge> & edges);
 bool ExportMshFile(const std::string & msh, const Triangulation<Point2D<coor_t> > & triangulation);
 bool ExportReportFile(const std::string & rpt, const MeshEvaluation2D & evaluation, bool pureText = false);
 bool ExportNodeAndEdges(const std::string & ne, const Point3DContainer & points, const std::list<IndexEdge> & edges);

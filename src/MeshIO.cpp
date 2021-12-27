@@ -1,5 +1,6 @@
 #include "MeshIO.h"
 #include "generic/geometry/TetrahedralizationIO.hpp"
+#include "generic/tools/StringHelper.hpp"
 #include "generic/tools/Parser.hpp"
 #include <ctime>
 using namespace generic;
@@ -200,6 +201,52 @@ bool ImportMshFile(const std::string & msh, Triangulation<Point2D<coor_t> > & tr
     return true;
 }
 
+bool ImportNodeAndEdges(const std::string & ne, Point3DContainer & points, std::list<IndexEdge> & edges)
+{
+    std::ifstream in(ne);
+    if(!in.is_open()) return false;
+
+    points.clear();
+    edges.clear();
+
+    size_t size, index;
+    int64_t x, y, z, v1, v2;
+    std::string line, tmp;
+    while(!in.eof()){
+        line.clear();
+        std::getline(in, line);
+        if(line.empty()) continue;
+        if(str::StartsWith(line, "NODES")){
+            std::stringstream ss(line);
+            ss >> tmp >> size;
+            points.reserve(size);
+            while(!in.eof() && size != points.size()){
+                std::getline(in, line);
+                std::stringstream ss(line);
+                ss >> index >> x >> y >> z;
+                points.emplace_back(x, y, z);
+            }
+            std::getline(in, line);
+            if(!str::StartsWith(line, "END_OF_NODES")) return false;
+        }
+        if(str::StartsWith(line, "EDGES")){
+            std::stringstream ss(line);
+            ss >> tmp >> size;
+            while(!in.eof() && size != edges.size()){
+                std::getline(in, line);
+                std::stringstream ss(line);
+                ss >> index >> v1 >> v2;
+                edges.emplace_back(v1, v2);
+            }
+            std::getline(in, line);
+            if(!str::StartsWith(line, "END_OF_EDGES")) return false;
+        }
+    }
+    
+    in.close();
+    return true;
+}
+
 bool ExportMshFile(const std::string & msh, const Triangulation<Point2D<coor_t> > & triangulation)
 {
     std::ofstream out(msh);
@@ -312,18 +359,20 @@ bool ExportNodeAndEdges(const std::string & ne, const Point3DContainer & points,
     if(!out.is_open()) return false;
 
     char sp(32);
-    out << "#NODES" << sp << points.size() << GENERIC_DEFAULT_EOL;
+    out << "NODES" << sp << points.size() << GENERIC_DEFAULT_EOL;
     size_t index = 0;
     for(const auto & point : points){
         out << index++ << sp << point[0] << sp << point[1] << sp << point[2] << std::endl;
     }
+    out << "END_OF_NODES" << GENERIC_DEFAULT_EOL;
  
-    out << "#ELEMENTS" << sp << edges.size() << GENERIC_DEFAULT_EOL;    
+    out << "EDGES" << sp << edges.size() << GENERIC_DEFAULT_EOL;    
     index = 0;
     for(const auto & edge : edges){
         out << index++ << sp << edge.v1() << sp << edge.v2() << GENERIC_DEFAULT_EOL;
     }
-    
+    out << "END_OF_EDGES" << GENERIC_DEFAULT_EOL;
+
     out.close();
     return true;
 }
