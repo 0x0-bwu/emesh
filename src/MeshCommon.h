@@ -29,7 +29,6 @@ template <typename T, typename... Args>
 using SPtr = std::shared_ptr<T, Args...>;
 
 enum class FileFormat { DomDmc, WKT, MSH, VTK };
-enum class MeshTask { MeshGeneration, MeshEvaluation };
 
 struct Mesh2Ctrl
 {
@@ -65,7 +64,6 @@ struct PointExtent
     }
 };
 
-using MeshTasks = std::queue<MeshTask>;
 using IndexEdgeList = std::list<IndexEdge>;
 using Point2DContainer = std::vector<Point2D<coor_t> >;
 using Point3DContainer = std::vector<Point3D<coor_t> >;

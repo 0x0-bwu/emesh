@@ -13,3 +13,4 @@ settings.json
 *.node
 *.log
 *.dbg
+*.ne

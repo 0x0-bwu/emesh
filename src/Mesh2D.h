@@ -27,7 +27,6 @@ struct Mesh2DB : private boost::noncopyable
     template<typename T>
     using Data = std::unique_ptr<T>;
 
-    Data<MeshTasks>          tasks;
     Data<IndexEdgeList>      edges;
     Data<Point2DContainer>   points;
     Data<PolygonContainer>   inGeoms;

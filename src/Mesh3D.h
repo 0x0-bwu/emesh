@@ -14,20 +14,20 @@ struct Mesh3Options
     Mesh3Ctrl meshCtrl;
     std::string workPath;
     std::string projName;
-    FileFormat iFileFormat = FileFormat::WKT;
+    FileFormat iFileFormat = FileFormat::DomDmc;
     FileFormat oFileFormat = FileFormat::VTK;
 };
 
 class MeshSketchLayer
 {
 public:
-    Polygon2D<coor_t> outline;//wbtest
+    size_t index = 0;//wbtest
     coor_t height[2] = {0, 0};//0 - top, 1 - bot
     SPtr<PolygonContainer> polygons = nullptr;
     SPtr<Segment2DContainer> constrains[2] = { nullptr, nullptr };
     SPtr<Point2DContainer> addPoints[2] = { nullptr, nullptr };
 
-    MeshSketchLayer() = default;
+    MeshSketchLayer(size_t idx) : index(idx) {}
     MeshSketchLayer(const MeshSketchLayer & other) = default;
     MeshSketchLayer & operator= (const MeshSketchLayer & other) = default;
 
@@ -43,6 +43,8 @@ class MeshSketchModel
 public:
     Box2D<coor_t> bbox;
     std::vector<MeshSketchLayer> layers;
+
+    void MakeLayerIndexOrdered();
     
     MeshSketchModel() = default;
     MeshSketchModel(const MeshSketchModel & other) = default;
@@ -109,9 +111,9 @@ public:
             }
 
             for(size_t i = 0; i < inGeoms->size(); ++i){
-                // for(size_t j = 0; j < 4; ++j){
-                //     subModels[j]->inGeoms->at(i)->emplace_back(toPolygon(subBoxes[j]));
-                // }//boundary, wbtest
+                for(size_t j = 0; j < 4; ++j){
+                    subModels[j]->inGeoms->at(i)->emplace_back(toPolygon(subBoxes[j]));
+                }//boundary, wbtest
                 auto & polygons = *(inGeoms->at(i));
                 while(!polygons.empty()){
                     bool contains = false;

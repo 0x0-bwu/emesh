@@ -3,6 +3,7 @@
 #include "generic/thread/ThreadPool.hpp"
 #include "generic/geometry/Utility.hpp"
 #include "Tetrahedralizator.h"
+#include "MeshFlow2D.h"
 #include "MeshIO.h"
 using namespace generic;
 using namespace emesh;
@@ -151,8 +152,8 @@ bool MeshFlow3D::SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIn
 {
     SplitOverlengthIntersections(intersections, maxLength);
     //for stacklayer polygons, only need split top and bot
-    SplitOverlengthPolygons(*(polygons.front()), maxLength);
-    SplitOverlengthPolygons(*(polygons.back()), maxLength);
+    // SplitOverlengthPolygons(*(polygons.front()), maxLength);
+    // SplitOverlengthPolygons(*(polygons.back()), maxLength);
     return true;
 }
 
@@ -177,8 +178,7 @@ bool MeshFlow3D::BuildMeshSketchModel(const StackLayerPolygons & polygons, const
     
     model.layers.clear();
     for(size_t i = 0; i < polygons.size(); ++i){
-        MeshSketchLayer layer;
-        layer.outline = geometry::toPolygon(model.bbox);//wbtest
+        MeshSketchLayer layer(i);
         layer.SetTopBotHeight(infos[i].elevation, infos[i].elevation - infos[i].thickness);
         layer.polygons = polygons[i];
         layer.SetConstrains(intersections[i], intersections[i + 1]);
@@ -221,6 +221,7 @@ bool MeshFlow3D::SliceOverheightLayers(MeshSketchModel & model, float_t ratio)
     model.layers.reserve(layers.size());
     for(auto & layer : layers)
         model.layers.emplace_back(std::move(layer));
+    model.MakeLayerIndexOrdered();
     return true;
 }
 
@@ -259,7 +260,7 @@ bool MeshFlow3D::GenerateTetrahedronDataFromSketchModel(MeshSketchModel & model,
 bool MeshFlow3D::GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet)
 {
     auto faces = std::make_unique<std::list<IndexFace> >();
-     auto edges = std::make_unique<std::list<IndexEdge> >();
+    auto edges = std::make_unique<std::list<IndexEdge> >();
     auto points = std::make_unique<std::vector<Point3D<coor_t> > >();
     if(!ExtractTopology(layer, *points, *faces, *edges)) return false;
 
@@ -268,7 +269,10 @@ bool MeshFlow3D::GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & 
         points->reserve(points->size() + addin->size());
         points->insert(points->end(), addin->begin(), addin->end());
     }
-    
+
+    std::string ne = "/mnt/c/Users/bwu/iCloudDrive/Code/myRepo/emesh/test/dmcdom/fccsp/fccsp_" + std::to_string(layer.index) + ".ne";
+    io::ExportNodeAndEdges(ne, *points, *edges);//wbtest
+
     if(!Tetrahedralize(*points, *faces, *edges, tet)) return false;
     return true;
 }
@@ -306,22 +310,10 @@ bool MeshFlow3D::ExtractTopology(const MeshSketchLayer & layer, Point3DContainer
     };
 
     for(size_t i = 0; i < 2; ++i){
-        if(layer.constrains[i]){
-            for(const auto & segment : *(layer.constrains[i])){
-                IndexEdge e(getIndex(segment[0], i), getIndex(segment[1], i));
-                addEdge(std::move(e));
-            }
-        }
-        else{
-            // for(const auto & polygon : *layer.polygons){
-            //     size_t size = polygon.Size();
-            //      for(size_t j = 0; j < size; ++j){
-            //         size_t k = (j + 1) % size;
-            //         IndexEdge e(getIndex(polygon[j], i), getIndex(polygon[k], i));
-            //         addEdge(std::move(e));
-            //     }
-            // }
-            assert(false);//wbtest 
+        GENERIC_ASSERT(layer.constrains[i])
+        for(const auto & segment : *(layer.constrains[i])){
+            IndexEdge e(getIndex(segment[0], i), getIndex(segment[1], i));
+            addEdge(std::move(e));
         }
     }
 
@@ -453,20 +445,22 @@ bool MeshFlow3D::SplitOverlengthEdges(Point3DContainer & points, std::list<Index
     return true;
 }
 
-// bool MeshFlow3D::WriteNodeAndEdgeFiles(const std::string & filename, const Point3DContainer & points, const std::list<IndexEdge> & edges)
-// {
-//     geometry::tet::PiecewiseLinearComplex<Point3D<coor_t> >  plc;
-//     plc.points = points;
-//     plc.surfaces.resize(edges.size());
-//     size_t index = 0;
+bool MeshFlow3D::WriteNodeAndEdgeFiles(const std::string & filename, const Point3DContainer & points, const std::list<IndexEdge> & edges)
+{
+    // geometry::tet::PiecewiseLinearComplex<Point3D<coor_t> >  plc;
+    // plc.points = points;
+    // plc.surfaces.resize(edges.size());
+    // size_t index = 0;
 
-//     using IdxPolyline = typename geometry::tet::PiecewiseLinearComplex<Point3D<coor_t> >::IdxPolyLine;
-//     for(const auto & edge : edges){
-//         plc.surfaces[index].faces.push_back(IdxPolyline{ edge.v1(), edge.v2()});
-//         index++;
-//     }
-//     return geometry::tet::WritePlcToNodeAndEdgeFiles(filename, plc);
-// }
+    // using IdxPolyline = typename geometry::tet::PiecewiseLinearComplex<Point3D<coor_t> >::IdxPolyLine;
+    // for(const auto & edge : edges){
+    //     plc.surfaces[index].faces.push_back(IdxPolyline{edge.v1(), edge.v2()});
+    //     index++;
+    // }
+    // return geometry::tet::WritePlcToNodeAndEdgeFiles(filename, plc);
+    return io::ExportNodeAndEdges(filename, points, edges);
+}
+
 bool MeshFlow3D::Tetrahedralize(const Point3DContainer & points, const std::list<std::vector<size_t> > & faces, const std::list<IndexEdge> & edges, TetrahedronData & tet)
 {
     Tetrahedralizator tetrahedralizator(tet);

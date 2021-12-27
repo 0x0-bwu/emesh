@@ -13,6 +13,7 @@ bool ImportWktFile(const std::string & wkt, PolygonWithHolesContainer & pwhs);
 bool ImportMshFile(const std::string & msh, Triangulation<Point2D<coor_t> > & triangulation);
 bool ExportMshFile(const std::string & msh, const Triangulation<Point2D<coor_t> > & triangulation);
 bool ExportReportFile(const std::string & rpt, const MeshEvaluation2D & evaluation, bool pureText = false);
+bool ExportNodeAndEdges(const std::string & ne, const Point3DContainer & points, const std::list<IndexEdge> & edges);
 bool ExportVtkFile(const std::string & vtk, const TetrahedronData & tet);
 bool ExportMshFile(const std::string & msh, const TetrahedronData & tet);
 

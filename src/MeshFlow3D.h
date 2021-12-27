@@ -9,7 +9,7 @@ public:
     static bool LoadGeometryFiles(const std::string & filename, FileFormat format, StackLayerPolygons & polygons, StackLayerInfos & infos);
     static bool CleanGeometries(StackLayerPolygons & polygons, coor_t distance);
     static bool CleanLayerGeometries(PolygonContainer & polygons, coor_t distance);
-    static bool ExtractModelsIntersections(std::vector<StackLayerModel * > & models);
+    static bool ExtractModelsIntersections(std::vector<Ptr<StackLayerModel> > & models);
     static bool ExtractModelIntersections(StackLayerModel & model);
     static bool ExtractInterfaceIntersections(const StackLayerPolygons & polygons, InterfaceIntersections & intersections);
     static bool ExtractInterfaceIntersection(const PolygonContainer & layer, Segment2DContainer & intersection);
@@ -29,7 +29,7 @@ public:
     static bool GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet);
     static bool ExtractTopology(const MeshSketchLayer & layer, Point3DContainer & points, std::list<IndexFace> & faces, std::list<IndexEdge> & edges);
     static bool SplitOverlengthEdges(Point3DContainer & points, std::list<IndexEdge> & edges, coor_t maxLength, bool surfaceOnly = true);
-    // static bool WriteNodeAndEdgeFiles(const std::string & filename, const Point3DContainer & points, const std::list<IndexEdge> & edges);
+    static bool WriteNodeAndEdgeFiles(const std::string & filename, const Point3DContainer & points, const std::list<IndexEdge> & edges);
     static bool LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos);
     static bool Tetrahedralize(const Point3DContainer & points, const std::list<std::vector<size_t> > & faces, const std::list<IndexEdge> & edges, TetrahedronData & tet);
     static bool MergeTetrahedrons(TetrahedronData & master, TetrahedronDataVec & tetVec);

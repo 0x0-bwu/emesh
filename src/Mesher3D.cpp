@@ -6,11 +6,15 @@ using namespace emesh;
 
 Mesher3D::Mesher3D()
 {
+    // std::string dataPath = filesystem::CurrentPath() + 
+    //                         GENERIC_FOLDER_SEPS + "thirdpart" + 
+    //                         GENERIC_FOLDER_SEPS + "internal" + 
+    //                         GENERIC_FOLDER_SEPS + "testdata" +
+    //                         GENERIC_FOLDER_SEPS + "wkt";
+
     std::string dataPath = filesystem::CurrentPath() + 
-                            GENERIC_FOLDER_SEPS + "thirdpart" + 
-                            GENERIC_FOLDER_SEPS + "internal" + 
-                            GENERIC_FOLDER_SEPS + "testdata" +
-                            GENERIC_FOLDER_SEPS + "wkt";
+                        GENERIC_FOLDER_SEPS + "test" + 
+                        GENERIC_FOLDER_SEPS + "dmcdom";
 
     // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "Iluvatar";
     // std::string projName = "Iluvatar";
@@ -67,6 +71,8 @@ bool Mesher3D::RunGenerateMesh()
 {
     bool res = true;
     std::string filename = options.workPath + GENERIC_FOLDER_SEPS + options.projName;
+    log::Info("work path: %1%", filename);
+
     //
     log::Info("start to load geometries from file...");
     db.model.reset(new StackLayerModel);
@@ -86,7 +92,13 @@ bool Mesher3D::RunGenerateMesh()
             bbox |= geometry::Extent(geom);
     }
     log::Info("total geometries: %1%", geomCount);
+
+    //wbtest
     db.model->bbox = bbox;
+    for(auto layer : *(db.model->inGeoms)){
+        if(layer) layer->emplace_back(toPolygon(bbox));
+    }
+    //wbtest
 
     //
     if(options.meshCtrl.tolerance != 0){
@@ -103,7 +115,7 @@ bool Mesher3D::RunGenerateMesh()
     log::Info("start create sub models..., level=%1%", level);
     StackLayerModel::CreateSubModels(*db.model, level);
 
-    std::vector<StackLayerModel *> subModels;
+    std::vector<Ptr<StackLayerModel> > subModels;
     StackLayerModel::GetAllLeafModels(*db.model, subModels);
     //
     log::Info("start extract models intersections...");
@@ -131,9 +143,9 @@ bool Mesher3D::RunGenerateMesh()
     }
     log::Info("total mesh sketch models: %1%", models->size());
 
-    //
-    log::Info("start insert grade points to mesh sketch layers...");
-    res = MeshFlow3D::AddGradePointsForMeshModels(*models, 100);
+    // //
+    // log::Info("start insert grade points to mesh sketch layers...");
+    // res = MeshFlow3D::AddGradePointsForMeshModels(*models, 100);
 
     //
     if(math::GT<float_t>(options.meshCtrl.smartZRatio, 1.0)){

@@ -48,6 +48,13 @@ std::pair<MeshSketchLayer, MeshSketchLayer> MeshSketchLayer::Slice() const
     return std::make_pair(top, bot);
 }
 
+void MeshSketchModel::MakeLayerIndexOrdered()
+{
+    size_t index = 0;
+    for(auto & layer : layers)
+        layer.index = index++;
+}
+
 TetrahedronDataMerger::TetrahedronDataMerger(TetrahedronData & data)
  : m_data(data)
 {

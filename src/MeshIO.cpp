@@ -305,6 +305,29 @@ bool ExportReportFile(const std::string & rpt, const MeshEvaluation2D & evaluati
     return true;
 }
 
+bool ExportNodeAndEdges(const std::string & ne, const Point3DContainer & points, const std::list<IndexEdge> & edges)
+{
+    //index start from 0
+    std::ofstream out(ne);
+    if(!out.is_open()) return false;
+
+    char sp(32);
+    out << "#NODES" << sp << points.size() << GENERIC_DEFAULT_EOL;
+    size_t index = 0;
+    for(const auto & point : points){
+        out << index++ << sp << point[0] << sp << point[1] << sp << point[2] << std::endl;
+    }
+ 
+    out << "#ELEMENTS" << sp << edges.size() << GENERIC_DEFAULT_EOL;    
+    index = 0;
+    for(const auto & edge : edges){
+        out << index++ << sp << edge.v1() << sp << edge.v2() << GENERIC_DEFAULT_EOL;
+    }
+    
+    out.close();
+    return true;
+}
+
 bool ExportVtkFile(const std::string & vtk, const TetrahedronData & tet)
 {
     return geometry::tet::WriteVtkFile(vtk, tet);
@@ -312,7 +335,41 @@ bool ExportVtkFile(const std::string & vtk, const TetrahedronData & tet)
 
 bool ExportMshFile(const std::string & msh, const TetrahedronData & tet)
 {
-    return geometry::tet::WriteMshFile(msh, tet);
+    std::ofstream out(msh);
+    if(!out.is_open()) return false;
+
+    char sp(32);
+    out << "$MeshFormat" << GENERIC_DEFAULT_EOL;
+    out << "2.2 0" << sp << sizeof(coor_t) << GENERIC_DEFAULT_EOL;
+    out << "$EndMeshFormat" << GENERIC_DEFAULT_EOL;
+
+    out << "$Nodes" << GENERIC_DEFAULT_EOL;
+    out << tet.points.size() << GENERIC_DEFAULT_EOL;
+    
+    size_t index = 0;
+    for(const auto & point : tet.points){
+        index++;
+        out << index << sp <<point[0] << sp << point[1] << sp << point[2] << GENERIC_DEFAULT_EOL;
+    }
+    out << "$EndNodes" << GENERIC_DEFAULT_EOL;
+    out << "$Elements" << GENERIC_DEFAULT_EOL;
+    out << tet.tetrahedrons.size() << GENERIC_DEFAULT_EOL;
+    index = 0;
+    size_t elmType = 4;
+    size_t phyType = 0;
+    size_t mshPart = 0;
+    for(const auto & tetrahedron : tet.tetrahedrons){
+        index++;
+        out << index << sp << elmType << phyType << sp << mshPart;
+        for(size_t i = 0; i < 4; ++i){
+            out << sp << tetrahedron.vertices[i];
+        }
+        out << GENERIC_DEFAULT_EOL; 
+    }
+    out << "$EndElements" << GENERIC_DEFAULT_EOL;
+
+    out.close();
+    return true;
 }
 
 }//namespace io

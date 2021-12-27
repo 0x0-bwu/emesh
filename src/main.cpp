@@ -16,7 +16,7 @@ struct MeshOptions
     bool printHelpMsg = false;
     std::string workPath;
     std::string projName;
-    FileFormat iFileFormat = FileFormat::WKT;
+    FileFormat iFileFormat = FileFormat::DomDmc;
     FileFormat oFileFormat = FileFormat::VTK;
 
     void SetMesh2Options(Mesh2Options & op) const
@@ -81,7 +81,7 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
         //input format
         if(ifmtOption->isSet()){
             auto fmt = ifmtOption->GetValue();
-            if("domdmc" == fmt || "dmcdom == fmt") mOp.iFileFormat = FileFormat::DomDmc;
+            if("domdmc" == fmt || "dmcdom" == fmt) mOp.iFileFormat = FileFormat::DomDmc;
             else if("wkt" == fmt) mOp.iFileFormat = FileFormat::WKT;
             else{
                 os << format::Format2String("Error: unsupported input file format: %1%", fmt) << GENERIC_DEFAULT_EOL;
