@@ -225,39 +225,39 @@ bool MeshFlow3D::SliceOverheightLayers(MeshSketchModel & model, float_t ratio)
     return true;
 }
 
-bool MeshFlow3D::GenerateTetrahedronVecFromSketchModels(std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec)
+bool MeshFlow3D::GenerateTetrahedronVecFromSketchModels(std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec, const Mesh3Ctrl & ctrl)
 {
     auto size = models.size();
     tetVec.resize(size);
     for(size_t i = 0; i < size; ++i){
-        GenerateTetrahedronDataFromSketchModel(models[i], tetVec[i]);
+        GenerateTetrahedronDataFromSketchModel(models[i], tetVec[i], ctrl);
         std::cout << "remain models : " << size - i - 1 << "/" << size << std::endl;//wbtest
         models[i].layers.clear();
     }
     return true;   
 }
 
-bool MeshFlow3D::GenerateTetrahedronVecFromSketchModel(MeshSketchModel & model, TetrahedronDataVec & tetVec)
+bool MeshFlow3D::GenerateTetrahedronVecFromSketchModel(MeshSketchModel & model, TetrahedronDataVec & tetVec, const Mesh3Ctrl & ctrl)
 {
     size_t layers = model.layers.size();
     tetVec.resize(layers);
     for(size_t i = 0; i < layers; ++i){
-        GenerateTetrahedronDataFromSketchLayer(model.layers[i], tetVec[i]);
+        GenerateTetrahedronDataFromSketchLayer(model.layers[i], tetVec[i], ctrl);
         std::cout << "remain layers: " << layers - i - 1 << "/" << layers << std::endl;//wbtest
     }
     return true;
 }
 
-bool MeshFlow3D::GenerateTetrahedronDataFromSketchModel(MeshSketchModel & model, TetrahedronData & tet)
+bool MeshFlow3D::GenerateTetrahedronDataFromSketchModel(MeshSketchModel & model, TetrahedronData & tet, const Mesh3Ctrl & ctrl)
 {
     tet.Clear();
     auto tetVec = std::make_unique<TetrahedronDataVec>();
-    GenerateTetrahedronVecFromSketchModel(model, *tetVec);
+    GenerateTetrahedronVecFromSketchModel(model, *tetVec, ctrl);
     MergeTetrahedrons(tet, *tetVec);
     return true;
 }
 
-bool MeshFlow3D::GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet)
+bool MeshFlow3D::GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet, const Mesh3Ctrl & ctrl)
 {
     auto faces = std::make_unique<std::list<IndexFace> >();
     auto edges = std::make_unique<std::list<IndexEdge> >();
@@ -269,9 +269,6 @@ bool MeshFlow3D::GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & 
         points->reserve(points->size() + addin->size());
         points->insert(points->end(), addin->begin(), addin->end());
     }
-
-    std::string ne = "/mnt/c/Users/bwu/iCloudDrive/Code/myRepo/emesh/test/dmcdom/fccsp/fccsp_" + std::to_string(layer.index) + ".ne";
-    io::ExportNodeAndEdges(ne, *points, *edges);//wbtest
 
     if(!Tetrahedralize(*points, *faces, *edges, tet)) return false;
     return true;
@@ -757,13 +754,13 @@ bool MeshFlow3DMT::ExtractModelsIntersections(std::vector<StackLayerModel * > & 
 //     return true;
 // }
 
-bool MeshFlow3DMT::GenerateTetrahedronVecFromSketchModels(std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec, size_t threads)
+bool MeshFlow3DMT::GenerateTetrahedronVecFromSketchModels(std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec, const Mesh3Ctrl & ctrl, size_t threads)
 {
     auto size = models.size();
     tetVec.resize(size);
     thread::ThreadPool pool(threads);
     for(size_t i = 0; i < size; ++i)
-        pool.Submit(std::bind(&MeshFlow3D::GenerateTetrahedronDataFromSketchModel, std::ref(models[i]), std::ref(tetVec[i])));        
+        pool.Submit(std::bind(&MeshFlow3D::GenerateTetrahedronDataFromSketchModel, std::ref(models[i]), std::ref(tetVec[i]), std::ref(ctrl)));        
     
     return true;
 }

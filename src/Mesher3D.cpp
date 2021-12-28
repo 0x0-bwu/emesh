@@ -155,8 +155,8 @@ bool Mesher3D::RunGenerateMesh()
     //
     log::Info("start generate mesh per sketch layer...");
     auto tetVec = std::make_unique<TetrahedronDataVec>();
-    if(0 == level) res = MeshFlow3D::GenerateTetrahedronVecFromSketchModel(models->front(), *tetVec);
-    else res = MeshFlow3D::GenerateTetrahedronVecFromSketchModels(*models, *tetVec);
+    if(0 == level) res = MeshFlow3D::GenerateTetrahedronVecFromSketchModel(models->front(), *tetVec, options.meshCtrl);
+    else res = MeshFlow3D::GenerateTetrahedronVecFromSketchModels(*models, *tetVec, options.meshCtrl);
     if(!res){
         log::Error("failed to generate mesh per sketch layer");
         return false;
