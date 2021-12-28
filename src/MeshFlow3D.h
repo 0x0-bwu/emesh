@@ -14,8 +14,8 @@ public:
     static bool ExtractInterfaceIntersections(const StackLayerPolygons & polygons, InterfaceIntersections & intersections);
     static bool ExtractInterfaceIntersection(const PolygonContainer & layer, Segment2DContainer & intersection);
     static bool ExtractInterfaceIntersection(const PolygonContainer & layer1, const PolygonContainer & layer2, Segment2DContainer & intersection);
-    static bool SplitOverlengthEdges(const StackLayerModel & model, coor_t maxLength);
-    static bool SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength);
+    // static bool SplitOverlengthEdges(const StackLayerModel & model, coor_t maxLength);
+    // static bool SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength);
     static bool BuildMeshSketchModels(StackLayerModel & model, std::vector<MeshSketchModel> & models);
     static bool BuildMeshSketchModel(const StackLayerPolygons & polygons, const InterfaceIntersections & intersections, const StackLayerInfos & infos, MeshSketchModel & model);
     static bool AddGradePointsForMeshModels(std::vector<MeshSketchModel> & models, size_t threshold);
@@ -36,11 +36,11 @@ public:
     static bool ExportResultFile(const std::string & filename,  FileFormat format, const TetrahedronData & tet);
 
     static bool SliceOverheightLayers(std::list<MeshSketchLayer> & layers, float_t ratio);
-    static void SplitOverlengthIntersections(InterfaceIntersections & intersections, coor_t maxLength);
-    static void SplitOverlengthSegments(Segment2DContainer & segments, coor_t maxLength);
-    static void SplitOverlengthPolygons(PolygonContainer & polygons, coor_t maxLength);
-    static void SplitOverlengthPolygon(Polygon2D<coor_t> & polygon, coor_t maxLength);
-    static void SplitOverlengthEdges(Point2DContainer & points, std::list<IndexEdge> & edges, coor_t maxLength);
+    // static void SplitOverlengthIntersections(InterfaceIntersections & intersections, coor_t maxLength);
+    // static void SplitOverlengthSegments(Segment2DContainer & segments, coor_t maxLength);
+    // static void SplitOverlengthPolygons(PolygonContainer & polygons, coor_t maxLength);
+    // static void SplitOverlengthPolygon(Polygon2D<coor_t> & polygon, coor_t maxLength);
+    // static void SplitOverlengthEdges(Point2DContainer & points, std::list<IndexEdge> & edges, coor_t maxLength);
     static void Polygons2Segments(const PolygonContainer & layer, std::list<Segment2D<coor_t> > & segments);
     static std::unique_ptr<Point2DContainer> AddPointsFromBalancedQuadTree(const Segment2DContainer & segments, size_t threshold);
     static std::unique_ptr<Point2DContainer> AddPointsFromBalancedQuadTree(const PolygonContainer & polygons, size_t threshold);

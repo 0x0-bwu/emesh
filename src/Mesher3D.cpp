@@ -124,14 +124,6 @@ bool Mesher3D::RunGenerateMesh()
         log::Error("failed to extract models intersections");
         return false;
     }
-
-    coor_t maxLength = std::max(bbox.Length(), bbox.Width()) / 10;
-    log::Info("start split overlength edges... , max length: %1%", maxLength);
-    res = MeshFlow3DMT::SplitOverlengthEdges(*db.model, maxLength, options.threads);
-    if(!res){
-        log::Error("failed to splitting overlength edges");
-        return false;
-    }
     
     //
     log::Info("start build mesh sketch models...");
@@ -156,6 +148,9 @@ bool Mesher3D::RunGenerateMesh()
             return false;
         }
     }
+
+    coor_t maxLength = std::max(bbox.Length(), bbox.Width()) / 10;//wbtest
+    options.meshCtrl.maxEdgeLenH = maxLength;//wbtest
 
     //
     log::Info("start generate mesh per sketch layer...");

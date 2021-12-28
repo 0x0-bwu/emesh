@@ -137,25 +137,25 @@ bool MeshFlow3D::ExtractInterfaceIntersection(const PolygonContainer & layer1, c
     return true;
 }
 
-bool MeshFlow3D::SplitOverlengthEdges(const StackLayerModel & model, coor_t maxLength)
-{
-    if(model.hasSubModels()){
-        bool res = true;
-        for(size_t i = 0; i < 4; ++i)
-            res = res && SplitOverlengthEdges((*model.subModels[i]), maxLength);
-        return res;
-    }
-    else return SplitOverlengthEdges(*model.inGeoms, *model.intersections, maxLength); 
-}
+// bool MeshFlow3D::SplitOverlengthEdges(const StackLayerModel & model, coor_t maxLength)
+// {
+//     if(model.hasSubModels()){
+//         bool res = true;
+//         for(size_t i = 0; i < 4; ++i)
+//             res = res && SplitOverlengthEdges((*model.subModels[i]), maxLength);
+//         return res;
+//     }
+//     else return SplitOverlengthEdges(*model.inGeoms, *model.intersections, maxLength); 
+// }
 
-bool MeshFlow3D::SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength)
-{
-    SplitOverlengthIntersections(intersections, maxLength);
-    //for stacklayer polygons, only need split top and bot
-    // SplitOverlengthPolygons(*(polygons.front()), maxLength);
-    // SplitOverlengthPolygons(*(polygons.back()), maxLength);
-    return true;
-}
+// bool MeshFlow3D::SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength)
+// {
+//     SplitOverlengthIntersections(intersections, maxLength);
+//     //for stacklayer polygons, only need split top and bot
+//     // SplitOverlengthPolygons(*(polygons.front()), maxLength);
+//     // SplitOverlengthPolygons(*(polygons.back()), maxLength);
+//     return true;
+// }
 
 bool MeshFlow3D::BuildMeshSketchModels(StackLayerModel & model, std::vector<MeshSketchModel> & models)
 {
@@ -539,73 +539,73 @@ bool MeshFlow3D::SliceOverheightLayers(std::list<MeshSketchLayer> & layers, floa
     return sliced;
 }
 
-void MeshFlow3D::SplitOverlengthIntersections(InterfaceIntersections & intersections, coor_t maxLength)
-{
-    if(0 == maxLength) return;
-    for(auto intersection : intersections)
-        SplitOverlengthSegments(*intersection, maxLength);
-}
+// void MeshFlow3D::SplitOverlengthIntersections(InterfaceIntersections & intersections, coor_t maxLength)
+// {
+//     if(0 == maxLength) return;
+//     for(auto intersection : intersections)
+//         SplitOverlengthSegments(*intersection, maxLength);
+// }
 
-void MeshFlow3D::SplitOverlengthSegments(Segment2DContainer & segments, coor_t maxLength)
-{
-    if(0 == maxLength) return;
-    coor_t maxLenSq = maxLength * maxLength;
+// void MeshFlow3D::SplitOverlengthSegments(Segment2DContainer & segments, coor_t maxLength)
+// {
+//     if(0 == maxLength) return;
+//     coor_t maxLenSq = maxLength * maxLength;
 
-    auto overLen = [&maxLenSq](const Segment2D<coor_t> & segment)
-    {
-        return DistanceSq(segment[0], segment[1]) > maxLenSq;
-    };
+//     auto overLen = [&maxLenSq](const Segment2D<coor_t> & segment)
+//     {
+//         return DistanceSq(segment[0], segment[1]) > maxLenSq;
+//     };
 
-    auto split = [](const Segment2D<coor_t> & segment)
-    {
-        auto ct = (segment[0] + segment[1]) * 0.5;
-        return std::make_pair(Segment2D<coor_t>(segment[0], ct), Segment2D<coor_t>(ct, segment[1]));
-    };
+//     auto split = [](const Segment2D<coor_t> & segment)
+//     {
+//         auto ct = (segment[0] + segment[1]) * 0.5;
+//         return std::make_pair(Segment2D<coor_t>(segment[0], ct), Segment2D<coor_t>(ct, segment[1]));
+//     };
 
-    auto it = segments.begin();
-    while(it != segments.end()){
-        if(overLen(*it)){
-            auto [s1, s2] = split(*it);
-            it = segments.erase(it);
-            it = segments.insert(it, s1);
-            it = segments.insert(it, s2);
-        }
-        else it++;
-    }
-}
+//     auto it = segments.begin();
+//     while(it != segments.end()){
+//         if(overLen(*it)){
+//             auto [s1, s2] = split(*it);
+//             it = segments.erase(it);
+//             it = segments.insert(it, s1);
+//             it = segments.insert(it, s2);
+//         }
+//         else it++;
+//     }
+// }
 
-void MeshFlow3D::SplitOverlengthPolygons(PolygonContainer & polygons, coor_t maxLength)
-{
-    for(auto & polygon : polygons)
-        SplitOverlengthPolygon(polygon, maxLength);
-}
+// void MeshFlow3D::SplitOverlengthPolygons(PolygonContainer & polygons, coor_t maxLength)
+// {
+//     for(auto & polygon : polygons)
+//         SplitOverlengthPolygon(polygon, maxLength);
+// }
 
-void MeshFlow3D::SplitOverlengthPolygon(Polygon2D<coor_t> & polygon, coor_t maxLength)
-{
-    if(0 == maxLength) return;
-    coor_t maxLenSq = maxLength * maxLength;
+// void MeshFlow3D::SplitOverlengthPolygon(Polygon2D<coor_t> & polygon, coor_t maxLength)
+// {
+//     if(0 == maxLength) return;
+//     coor_t maxLenSq = maxLength * maxLength;
 
-    auto overLen = [&maxLenSq](const Point2D<coor_t> & p1, const Point2D<coor_t> & p2)
-    {
-        return DistanceSq(p1, p2) > maxLenSq;
-    };
+//     auto overLen = [&maxLenSq](const Point2D<coor_t> & p1, const Point2D<coor_t> & p2)
+//     {
+//         return DistanceSq(p1, p2) > maxLenSq;
+//     };
         
-    std::list<Point2D<coor_t> > points(polygon.ConstBegin(), polygon.ConstEnd());
-    auto curr = points.begin();
-    while(curr != points.end()){
-        auto next = curr; next++;
-        if(next == points.end())
-            next = points.begin();
-        if(overLen(*curr, *next)){
-            auto ct = (*curr + *next) * 0.5;
-            points.insert(next, ct);
-        }
-        else curr++;
-    }
+//     std::list<Point2D<coor_t> > points(polygon.ConstBegin(), polygon.ConstEnd());
+//     auto curr = points.begin();
+//     while(curr != points.end()){
+//         auto next = curr; next++;
+//         if(next == points.end())
+//             next = points.begin();
+//         if(overLen(*curr, *next)){
+//             auto ct = (*curr + *next) * 0.5;
+//             points.insert(next, ct);
+//         }
+//         else curr++;
+//     }
 
-    polygon.Clear();
-    polygon.Insert(polygon.End(), points.begin(), points.end());
-}
+//     polygon.Clear();
+//     polygon.Insert(polygon.End(), points.begin(), points.end());
+// }
 
 void MeshFlow3D::Polygons2Segments(const PolygonContainer & polygons, std::list<Segment2D<coor_t> > & segments)
 {
@@ -732,30 +732,30 @@ bool MeshFlow3DMT::ExtractModelsIntersections(std::vector<StackLayerModel * > & 
 //     return res;
 // }
 
-bool MeshFlow3DMT::SplitOverlengthEdges(const StackLayerModel & model, coor_t maxLength, size_t threads)
-{
-    if(model.hasSubModels()){
-        bool res = true;
-        for(size_t i = 0; i < 4; ++i)
-            res = res && SplitOverlengthEdges((*model.subModels[i]), maxLength, threads);
-        return res;
-    }
-    else return SplitOverlengthEdges(*model.inGeoms, *model.intersections, maxLength, threads);
-}
+// bool MeshFlow3DMT::SplitOverlengthEdges(const StackLayerModel & model, coor_t maxLength, size_t threads)
+// {
+//     if(model.hasSubModels()){
+//         bool res = true;
+//         for(size_t i = 0; i < 4; ++i)
+//             res = res && SplitOverlengthEdges((*model.subModels[i]), maxLength, threads);
+//         return res;
+//     }
+//     else return SplitOverlengthEdges(*model.inGeoms, *model.intersections, maxLength, threads);
+// }
 
-bool MeshFlow3DMT::SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength, size_t threads)
-{
-    if(0 == maxLength) return true;
-    thread::ThreadPool pool(threads);
+// bool MeshFlow3DMT::SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength, size_t threads)
+// {
+//     if(0 == maxLength) return true;
+//     thread::ThreadPool pool(threads);
 
-    pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthPolygons, std::ref(*(polygons.front())), maxLength));
-    pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthPolygons, std::ref(*(polygons.back())), maxLength));
+//     pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthPolygons, std::ref(*(polygons.front())), maxLength));
+//     pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthPolygons, std::ref(*(polygons.back())), maxLength));
 
-    for(size_t i = 0; i < intersections.size(); ++i){
-        pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthSegments, std::ref(*(intersections[i])), maxLength));
-    }        
-    return true;
-}
+//     for(size_t i = 0; i < intersections.size(); ++i){
+//         pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthSegments, std::ref(*(intersections[i])), maxLength));
+//     }        
+//     return true;
+// }
 
 bool MeshFlow3DMT::GenerateTetrahedronVecFromSketchModels(std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec, size_t threads)
 {
