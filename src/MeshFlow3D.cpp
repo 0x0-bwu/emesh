@@ -2,6 +2,7 @@
 #include "generic/tree/QuadTreeUtilityMT.hpp"
 #include "generic/thread/ThreadPool.hpp"
 #include "generic/geometry/Utility.hpp"
+#include "generic/tools/Log.hpp"
 #include "Tetrahedralizator.h"
 #include "MeshFlow2D.h"
 #include "MeshIO.h"
@@ -110,7 +111,7 @@ bool MeshFlow3D::ExtractInterfaceIntersections(const StackLayerPolygons & polygo
     for(auto & intersection : intersections)
         intersection = std::make_shared<Segment2DContainer>();
     
-    ExtractInterfaceIntersection(*(polygons.front()), *(intersections.front()));//wbtest
+    ExtractInterfaceIntersection(*(polygons.front()), *(intersections.front()));
     if(polygons.size() > 1) ExtractInterfaceIntersection(*(polygons.back()), *(intersections.back()));    
     for(size_t i = 0; i < polygons.size() - 1; ++i){
         ExtractInterfaceIntersection(*(polygons[i]), *(polygons[i + 1]), *(intersections[i + 1]));
@@ -136,26 +137,6 @@ bool MeshFlow3D::ExtractInterfaceIntersection(const PolygonContainer & layer1, c
     boost::polygon::intersect_segments(intersection, temp.begin(), temp.end());
     return true;
 }
-
-// bool MeshFlow3D::SplitOverlengthEdges(const StackLayerModel & model, coor_t maxLength)
-// {
-//     if(model.hasSubModels()){
-//         bool res = true;
-//         for(size_t i = 0; i < 4; ++i)
-//             res = res && SplitOverlengthEdges((*model.subModels[i]), maxLength);
-//         return res;
-//     }
-//     else return SplitOverlengthEdges(*model.inGeoms, *model.intersections, maxLength); 
-// }
-
-// bool MeshFlow3D::SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength)
-// {
-//     SplitOverlengthIntersections(intersections, maxLength);
-//     //for stacklayer polygons, only need split top and bot
-//     // SplitOverlengthPolygons(*(polygons.front()), maxLength);
-//     // SplitOverlengthPolygons(*(polygons.back()), maxLength);
-//     return true;
-// }
 
 bool MeshFlow3D::BuildMeshSketchModels(StackLayerModel & model, std::vector<MeshSketchModel> & models)
 {
@@ -225,36 +206,42 @@ bool MeshFlow3D::SliceOverheightLayers(MeshSketchModel & model, float_t ratio)
     return true;
 }
 
-bool MeshFlow3D::GenerateTetrahedronVecFromSketchModels(std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec, const Mesh3Ctrl & ctrl)
+bool MeshFlow3D::GenerateTetrahedronVecFromSketchModels(const std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec, const Mesh3Ctrl & ctrl)
 {
     auto size = models.size();
     tetVec.resize(size);
     for(size_t i = 0; i < size; ++i){
-        GenerateTetrahedronDataFromSketchModel(models[i], tetVec[i], ctrl);
-        std::cout << "remain models : " << size - i - 1 << "/" << size << std::endl;//wbtest
-        models[i].layers.clear();
+        log::Info("remain models: %1%/%2%", size - i, size);
+        GenerateTetrahedronDataFromSketchModel(models, i, tetVec[i], ctrl);
+        // models[i].layers.clear();
     }
     return true;   
 }
 
-bool MeshFlow3D::GenerateTetrahedronVecFromSketchModel(MeshSketchModel & model, TetrahedronDataVec & tetVec, const Mesh3Ctrl & ctrl)
+bool MeshFlow3D::GenerateTetrahedronVecFromSketchModel(const std::vector<MeshSketchModel> & models, size_t index, TetrahedronDataVec & tetVec, const Mesh3Ctrl & ctrl)
 {
+    if(index >= models.size()) return false;
+
+    const auto & model = models[index];
     size_t layers = model.layers.size();
     tetVec.resize(layers);
     for(size_t i = 0; i < layers; ++i){
-        GenerateTetrahedronDataFromSketchLayer(model.layers[i], tetVec[i], ctrl);
-        std::cout << "remain layers: " << layers - i - 1 << "/" << layers << std::endl;//wbtest
+        log::Info("model %1%: remain layers: %2%/%3%", index + 1, layers - i, layers);
+        if(!GenerateTetrahedronDataFromSketchLayer(model.layers[i], tetVec[i], ctrl)){
+            log::Error("model %1%: failed to generate mesh of layer %2%", index + 1, i + 1);
+            return false;
+        }
     }
     return true;
 }
 
-bool MeshFlow3D::GenerateTetrahedronDataFromSketchModel(MeshSketchModel & model, TetrahedronData & tet, const Mesh3Ctrl & ctrl)
+bool MeshFlow3D::GenerateTetrahedronDataFromSketchModel(const std::vector<MeshSketchModel> & models, size_t index, TetrahedronData & tet, const Mesh3Ctrl & ctrl)
 {
     tet.Clear();
     auto tetVec = std::make_unique<TetrahedronDataVec>();
-    GenerateTetrahedronVecFromSketchModel(model, *tetVec, ctrl);
-    MergeTetrahedrons(tet, *tetVec);
-    return true;
+    bool res = GenerateTetrahedronVecFromSketchModel(models, index, *tetVec, ctrl);
+    res = res && MergeTetrahedrons(tet, *tetVec);
+    return res;
 }
 
 bool MeshFlow3D::GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet, const Mesh3Ctrl & ctrl)
@@ -262,7 +249,8 @@ bool MeshFlow3D::GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & 
     auto faces = std::make_unique<std::list<IndexFace> >();
     auto edges = std::make_unique<std::list<IndexEdge> >();
     auto points = std::make_unique<std::vector<Point3D<coor_t> > >();
-    if(!ExtractTopology(layer, *points, *faces, *edges)) return false;
+    if(!ExtractTopology(layer, *points, *faces, *edges))
+        return false;
 
     auto addin = layer.GetAdditionalPoints();
     if(addin){
@@ -270,7 +258,15 @@ bool MeshFlow3D::GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & 
         points->insert(points->end(), addin->begin(), addin->end());
     }
 
-    if(!Tetrahedralize(*points, *faces, *edges, tet)) return false;
+    if(!SplitOverlengthEdges(*points, *edges, ctrl.maxEdgeLenH, true))
+        return false;
+
+    if(!Tetrahedralize(*points, *faces, *edges, tet)){
+        std::string ne = "./debug.ne";
+        io::ExportNodeAndEdges(ne, *points, *edges);
+        log::Error("dump debug node edge file to %1%", ne);
+        return false;
+    }
     return true;
 }
 
@@ -419,26 +415,28 @@ bool MeshFlow3D::SplitOverlengthEdges(Point3DContainer & points, std::list<Index
         points.push_back((points[e.v1()] + points[e.v2()]) * 0.5);
         return std::make_pair(IndexEdge(e.v1(), index), IndexEdge(index, e.v2()));
     };
+    auto isVertical = [&points](const IndexEdge & e)
+    {
+        const auto & p1 = points[e.v1()];
+        const auto & p2 = points[e.v2()];
+        return p1[0] == p2[0] && p1[1] == p2[1];
+    };
 
-    std::list<IndexEdge> tmp;
-    while(edges.size()){
-        IndexEdge e = edges.front();
-        edges.pop_front();
-        if(surfaceOnly){
-            const auto & p1 = points[e.v1()];
-            const auto & p2 = points[e.v2()];
-            if(p1[0] == p2[0] && p1[1] == p2[1])
-                continue;
+    auto iter = edges.begin();
+    while(iter != edges.end()){
+        if(surfaceOnly && isVertical(*iter)){
+            ++iter; continue;
         }
-        if(maxLenSq < lenSq(e)){
-            auto added = split(e);
-            edges.emplace_front(std::move(added.first));
-            edges.emplace_front(std::move(added.second));
+        else if(lenSq(*iter) <= maxLenSq){
+            ++iter; continue;
         }
-        else tmp.emplace_back(std::move(e));
+        else{
+            auto [e1, e2] = split(*iter);
+            iter = edges.erase(iter);
+            iter = edges.insert(iter, e2);
+            iter = edges.insert(iter, e1);
+        }
     }
-
-    std::swap(edges, tmp);
     return true;
 }
 
@@ -536,74 +534,6 @@ bool MeshFlow3D::SliceOverheightLayers(std::list<MeshSketchLayer> & layers, floa
     return sliced;
 }
 
-// void MeshFlow3D::SplitOverlengthIntersections(InterfaceIntersections & intersections, coor_t maxLength)
-// {
-//     if(0 == maxLength) return;
-//     for(auto intersection : intersections)
-//         SplitOverlengthSegments(*intersection, maxLength);
-// }
-
-// void MeshFlow3D::SplitOverlengthSegments(Segment2DContainer & segments, coor_t maxLength)
-// {
-//     if(0 == maxLength) return;
-//     coor_t maxLenSq = maxLength * maxLength;
-
-//     auto overLen = [&maxLenSq](const Segment2D<coor_t> & segment)
-//     {
-//         return DistanceSq(segment[0], segment[1]) > maxLenSq;
-//     };
-
-//     auto split = [](const Segment2D<coor_t> & segment)
-//     {
-//         auto ct = (segment[0] + segment[1]) * 0.5;
-//         return std::make_pair(Segment2D<coor_t>(segment[0], ct), Segment2D<coor_t>(ct, segment[1]));
-//     };
-
-//     auto it = segments.begin();
-//     while(it != segments.end()){
-//         if(overLen(*it)){
-//             auto [s1, s2] = split(*it);
-//             it = segments.erase(it);
-//             it = segments.insert(it, s1);
-//             it = segments.insert(it, s2);
-//         }
-//         else it++;
-//     }
-// }
-
-// void MeshFlow3D::SplitOverlengthPolygons(PolygonContainer & polygons, coor_t maxLength)
-// {
-//     for(auto & polygon : polygons)
-//         SplitOverlengthPolygon(polygon, maxLength);
-// }
-
-// void MeshFlow3D::SplitOverlengthPolygon(Polygon2D<coor_t> & polygon, coor_t maxLength)
-// {
-//     if(0 == maxLength) return;
-//     coor_t maxLenSq = maxLength * maxLength;
-
-//     auto overLen = [&maxLenSq](const Point2D<coor_t> & p1, const Point2D<coor_t> & p2)
-//     {
-//         return DistanceSq(p1, p2) > maxLenSq;
-//     };
-        
-//     std::list<Point2D<coor_t> > points(polygon.ConstBegin(), polygon.ConstEnd());
-//     auto curr = points.begin();
-//     while(curr != points.end()){
-//         auto next = curr; next++;
-//         if(next == points.end())
-//             next = points.begin();
-//         if(overLen(*curr, *next)){
-//             auto ct = (*curr + *next) * 0.5;
-//             points.insert(next, ct);
-//         }
-//         else curr++;
-//     }
-
-//     polygon.Clear();
-//     polygon.Insert(polygon.End(), points.begin(), points.end());
-// }
-
 void MeshFlow3D::Polygons2Segments(const PolygonContainer & polygons, std::list<Segment2D<coor_t> > & segments)
 {
     for(const auto & polygon : polygons){
@@ -615,7 +545,6 @@ void MeshFlow3D::Polygons2Segments(const PolygonContainer & polygons, std::list<
         }
     }
 }
-
 
 std::unique_ptr<Point2DContainer> MeshFlow3D::AddPointsFromBalancedQuadTree(const Segment2DContainer & segments, size_t threshold)
 {    
@@ -692,79 +621,20 @@ bool MeshFlow3DMT::ExtractModelsIntersections(std::vector<StackLayerModel * > & 
     return true;
 }
 
-// bool MeshFlow3DMT::ExtractInterfaceIntersections(StackLayerModel & model, size_t threads)
-// {
-//     if(model.hasSubModels()){
-//         bool res = true;
-//         for(size_t i = 0; i < 4; ++i)
-//             res = res && ExtractInterfaceIntersections((*model.subModels[i]), threads);
-//         return res;
-//     }
-//     else{
-//         if(nullptr == model.inGeoms) return false;
-//         model.intersections.reset(new InterfaceIntersections);
-//         return ExtractInterfaceIntersections(*model.inGeoms, *model.intersections, threads);
-//     }
-// }
-
-// bool MeshFlow3DMT::ExtractInterfaceIntersections(const StackLayerPolygons & polygons, InterfaceIntersections & intersections, size_t threads)
-// {
-//     intersections.clear();
-//     if(polygons.size() <= 1) return false;
-
-//     auto size = polygons.size() - 1;
-//     intersections.resize(size);
-
-//     thread::ThreadPool pool(threads);
-//     std::vector<std::future<bool> > futures(size);
-//     for(size_t i = 0; i < size; ++i){
-//         futures[i] = pool.Submit(std::bind(&MeshFlow3D::ExtractInterfaceIntersection,
-//                                  std::ref(polygons[i]), std::ref(polygons[i + 1]), std::ref(intersections[i])));        
-//     }      
-    
-//     bool res = true;
-//     for(size_t i = 0; i < futures.size(); ++i)
-//         res = res && futures[i].get();
-
-//     return res;
-// }
-
-// bool MeshFlow3DMT::SplitOverlengthEdges(const StackLayerModel & model, coor_t maxLength, size_t threads)
-// {
-//     if(model.hasSubModels()){
-//         bool res = true;
-//         for(size_t i = 0; i < 4; ++i)
-//             res = res && SplitOverlengthEdges((*model.subModels[i]), maxLength, threads);
-//         return res;
-//     }
-//     else return SplitOverlengthEdges(*model.inGeoms, *model.intersections, maxLength, threads);
-// }
-
-// bool MeshFlow3DMT::SplitOverlengthEdges(StackLayerPolygons & polygons, InterfaceIntersections & intersections, coor_t maxLength, size_t threads)
-// {
-//     if(0 == maxLength) return true;
-//     thread::ThreadPool pool(threads);
-
-//     pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthPolygons, std::ref(*(polygons.front())), maxLength));
-//     pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthPolygons, std::ref(*(polygons.back())), maxLength));
-
-//     for(size_t i = 0; i < intersections.size(); ++i){
-//         pool.Submit(std::bind(&MeshFlow3D::SplitOverlengthSegments, std::ref(*(intersections[i])), maxLength));
-//     }        
-//     return true;
-// }
-
-bool MeshFlow3DMT::GenerateTetrahedronVecFromSketchModels(std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec, const Mesh3Ctrl & ctrl, size_t threads)
+bool MeshFlow3DMT::GenerateTetrahedronVecFromSketchModels(const std::vector<MeshSketchModel> & models, TetrahedronDataVec & tetVec, const Mesh3Ctrl & ctrl, size_t threads)
 {
     auto size = models.size();
     tetVec.resize(size);
     thread::ThreadPool pool(threads);
+    std::vector<std::future<bool> > futures(size);
     for(size_t i = 0; i < size; ++i)
-        pool.Submit(std::bind(&MeshFlow3D::GenerateTetrahedronDataFromSketchModel, std::ref(models[i]), std::ref(tetVec[i]), std::ref(ctrl)));        
+        futures[i] = pool.Submit(std::bind(&MeshFlow3D::GenerateTetrahedronDataFromSketchModel, std::cref(models), i, std::ref(tetVec[i]), std::ref(ctrl)));        
     
-    return true;
+    bool res = true;
+    for(auto & future : futures)
+        res = res && future.get();
+    return res;
 }
-
 
 // bool MeshFlow3DMT::AddGradePointsForMeshModel(MeshSketchModel & model, size_t threshold, size_t threads)
 // {

@@ -409,7 +409,7 @@ bool ExportMshFile(const std::string & msh, const TetrahedronData & tet)
     size_t mshPart = 0;
     for(const auto & tetrahedron : tet.tetrahedrons){
         index++;
-        out << index << sp << elmType << phyType << sp << mshPart;
+        out << index << sp << elmType << sp << phyType << sp << mshPart;
         for(size_t i = 0; i < 4; ++i){
             out << sp << tetrahedron.vertices[i];
         }

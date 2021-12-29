@@ -111,19 +111,18 @@ bool MeshFlow2D::SplitOverlengthEdges(Point2DContainer & points, std::list<Index
         return std::make_pair(IndexEdge(e.v1(), index), IndexEdge(index, e.v2()));
     };
 
-    std::list<IndexEdge> tmp;
-    while(edges.size()){
-        IndexEdge e = edges.front();
-        edges.pop_front();
-        if(maxLenSq < lenSq(e)){
-            auto added = split(e);
-            edges.emplace_front(std::move(added.first));
-            edges.emplace_front(std::move(added.second));
+    auto iter = edges.begin();
+    while(iter != edges.end()){
+        if(lenSq(*iter) <= maxLenSq){
+            ++iter; continue;
         }
-        else tmp.emplace_back(std::move(e));
+        else{
+            auto [e1, e2] = split(*iter);
+            iter = edges.erase(iter);
+            iter = edges.insert(iter, e2);
+            iter = edges.insert(iter, e1);
+        }
     }
-
-    std::swap(edges, tmp);
     return true;
 }
 

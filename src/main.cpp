@@ -11,6 +11,7 @@ using namespace emesh;
 struct MeshOptions
 {
     size_t threads = 1;
+    size_t partLvl = 0;
     bool testFlow = false;
     bool surfaceMesh = false;
     bool printHelpMsg = false;
@@ -27,8 +28,9 @@ struct MeshOptions
     void SetMesh3Options(Mesh3Options & op) const
     {
         op.threads = threads;
-        // op.workPath = workPath;//wbtest
-        // op.projName = projName;//wbtest
+        op.partLvl = partLvl;
+        op.workPath = workPath;
+        op.projName = projName;
         op.iFileFormat = iFileFormat;
         op.oFileFormat = oFileFormat;
     }
@@ -49,6 +51,7 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
     auto ifmtOption = op.Add<Value<std::string> >("i", "input", "input file format", "wkt");
     auto ofmtOption = op.Add<Value<std::string> >("o", "output", "output file format", "vtk");
     auto jobsOption = op.Add<Value<int> >("j", "jobs", "cpu core numbers in use", 1);
+    auto partOption = op.Add<Value<int> >("p", "partition", "partition level", 0);
     try {
         op.Parse(argc, argv);
 
@@ -91,7 +94,7 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
 
         //output format
         if(ofmtOption->isSet()){
-            auto fmt = ifmtOption->GetValue();
+            auto fmt = ofmtOption->GetValue();
             if("msh" == fmt) mOp.oFileFormat = FileFormat::MSH;
             else if("vtk" == fmt) mOp.oFileFormat = FileFormat::VTK;
             else{
@@ -104,6 +107,12 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
         if(jobsOption->isSet()){
             int num = jobsOption->GetValue();
             if(num > 0) mOp.threads = static_cast<size_t>(num);
+        }
+
+        //partition level
+        if(partOption->isSet()){
+            int num = partOption->GetValue();
+            if(num > 0) mOp.partLvl = static_cast<size_t>(num);
         }
 
         return true;

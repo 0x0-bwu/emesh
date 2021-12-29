@@ -13,4 +13,5 @@ settings.json
 *.node
 *.log
 *.dbg
+*.msh
 *.ne

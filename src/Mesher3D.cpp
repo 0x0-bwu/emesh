@@ -6,34 +6,6 @@ using namespace emesh;
 
 Mesher3D::Mesher3D()
 {
-    // std::string dataPath = filesystem::CurrentPath() + 
-    //                         GENERIC_FOLDER_SEPS + "thirdpart" + 
-    //                         GENERIC_FOLDER_SEPS + "internal" + 
-    //                         GENERIC_FOLDER_SEPS + "testdata" +
-    //                         GENERIC_FOLDER_SEPS + "wkt";
-
-    std::string dataPath = filesystem::CurrentPath() + 
-                        GENERIC_FOLDER_SEPS + "test" + 
-                        GENERIC_FOLDER_SEPS + "dmcdom";
-
-    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "Iluvatar";
-    // std::string projName = "Iluvatar";
-
-    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "odb";
-    // std::string projName = "odb";
-
-    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "subgds";
-    // std::string projName = "subgds";
-  
-    std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "fccsp";
-    std::string projName = "fccsp";
-
-    // dataPath = filesystem::CurrentPath() + GENERIC_FOLDER_SEPS + "test";
-    // std::string workPath = dataPath + GENERIC_FOLDER_SEPS + "cube";
-    // std::string projName = "cube";
-    
-    options.workPath = workPath;
-    options.projName = projName;//wbtest
 }
 
 bool Mesher3D::Run()
@@ -99,7 +71,6 @@ bool Mesher3D::RunGenerateMesh()
         if(layer) layer->emplace_back(toPolygon(bbox));
     }
     //wbtest
-
     //
     if(options.meshCtrl.tolerance != 0){
         log::Info("start simplify geometries... , tolerance: %1%", options.meshCtrl.tolerance);
@@ -111,9 +82,10 @@ bool Mesher3D::RunGenerateMesh()
     }
     
     //
-    size_t level = 0;
-    log::Info("start create sub models..., level=%1%", level);
-    StackLayerModel::CreateSubModels(*db.model, level);
+    if(options.partLvl > 0){
+        log::Info("start create sub models..., level=%1%", options.partLvl);
+        StackLayerModel::CreateSubModels(*db.model, options.partLvl);
+    }
 
     std::vector<Ptr<StackLayerModel> > subModels;
     StackLayerModel::GetAllLeafModels(*db.model, subModels);
@@ -135,7 +107,7 @@ bool Mesher3D::RunGenerateMesh()
     }
     log::Info("total mesh sketch models: %1%", models->size());
 
-    // //
+    //
     // log::Info("start insert grade points to mesh sketch layers...");
     // res = MeshFlow3D::AddGradePointsForMeshModels(*models, 100);
 
@@ -153,12 +125,11 @@ bool Mesher3D::RunGenerateMesh()
     options.meshCtrl.maxEdgeLenH = maxLength;//wbtest
 
     //
-    log::Info("start generate mesh per sketch layer...");
+    log::Info("start generate mesh per model per sketch layer...");
     auto tetVec = std::make_unique<TetrahedronDataVec>();
-    if(0 == level) res = MeshFlow3D::GenerateTetrahedronVecFromSketchModel(models->front(), *tetVec, options.meshCtrl);
-    else res = MeshFlow3D::GenerateTetrahedronVecFromSketchModels(*models, *tetVec, options.meshCtrl);
+    res = MeshFlow3DMT::GenerateTetrahedronVecFromSketchModels(*models, *tetVec, options.meshCtrl);
     if(!res){
-        log::Error("failed to generate mesh per sketch layer");
+        log::Error("failed to generate mesh per model per sketch layer");
         return false;
     }
     db.model.reset();
@@ -167,7 +138,7 @@ bool Mesher3D::RunGenerateMesh()
     for(size_t i = 0; i < tetVec->size(); ++i){
         std::string layerFile = filename + "_" + std::to_string(i + 1);
         MeshFlow3D::ExportResultFile(layerFile, options.oFileFormat, tetVec->at(i));
-    }//wbtest
+    }
 
     //
     log::Info("start merge mesh results...");

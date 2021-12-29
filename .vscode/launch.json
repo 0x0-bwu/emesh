@@ -10,7 +10,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/eMesher.exe",
-            "args": ["test"],
+            "args": ["${workspaceFolder}/test/dmcdom/subgds/subgds","-i", "dmcdom", "-o", "msh", "--jobs","4", "-p", "0"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

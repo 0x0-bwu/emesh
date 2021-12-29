@@ -11,6 +11,7 @@ namespace emesh {
 struct Mesh3Options
 {
     size_t threads;
+    size_t partLvl;
     Mesh3Ctrl meshCtrl;
     std::string workPath;
     std::string projName;
@@ -21,7 +22,7 @@ struct Mesh3Options
 class MeshSketchLayer
 {
 public:
-    size_t index = 0;//wbtest
+    size_t index = 0;
     coor_t height[2] = {0, 0};//0 - top, 1 - bot
     SPtr<PolygonContainer> polygons = nullptr;
     SPtr<Segment2DContainer> constrains[2] = { nullptr, nullptr };
