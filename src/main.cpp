@@ -10,11 +10,13 @@ using namespace generic;
 using namespace emesh;
 struct MeshOptions
 {
-    size_t threads = 1;
-    size_t partLvl = 0;
     bool testFlow = false;
     bool surfaceMesh = false;
     bool printHelpMsg = false;
+    int threads = 1;
+    int partLvl = 0;
+    int maxGradeLvl = 0;
+    double smartZRatio = 1.0;
     std::string workPath;
     std::string projName;
     FileFormat iFileFormat = FileFormat::DomDmc;
@@ -29,10 +31,12 @@ struct MeshOptions
     {
         op.threads = threads;
         op.partLvl = partLvl;
+        op.maxGradeLvl = maxGradeLvl;
         op.workPath = workPath;
         op.projName = projName;
         op.iFileFormat = iFileFormat;
         op.oFileFormat = oFileFormat;
+        op.meshCtrl.smartZRatio = smartZRatio;
     }
 };
 
@@ -52,6 +56,8 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
     auto ofmtOption = op.Add<Value<std::string> >("o", "output", "output file format", "vtk");
     auto jobsOption = op.Add<Value<int> >("j", "jobs", "cpu core numbers in use", 1);
     auto partOption = op.Add<Value<int> >("p", "partition", "partition level", 0);
+    auto grdeOption = op.Add<Value<int> >("g", "gradelevel", "grade level", 0);
+    auto smtZOption = op.Add<Value<double> >("z", "ratioz", "vertical slice ratio", 1.0);
     try {
         op.Parse(argc, argv);
 
@@ -106,15 +112,26 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
         //threads
         if(jobsOption->isSet()){
             int num = jobsOption->GetValue();
-            if(num > 0) mOp.threads = static_cast<size_t>(num);
+            if(0 < num && num < 256) mOp.threads = num;
         }
 
         //partition level
         if(partOption->isSet()){
             int num = partOption->GetValue();
-            if(num > 0) mOp.partLvl = static_cast<size_t>(num);
+            if(0 < num && num < 256) mOp.partLvl = num;
+        }
+        
+        //grade level
+        if(grdeOption->isSet()){
+            int num = grdeOption->GetValue();
+            if(0 < num && num < 256) mOp.maxGradeLvl = num;
         }
 
+        //vertical slice ratio
+        if(smtZOption->isSet()){
+            double ratio = smtZOption->GetValue();
+            if(ratio > 1.0) mOp.smartZRatio = ratio;
+        }
         return true;
     }
     catch (const InvalidOption & e)

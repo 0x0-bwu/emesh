@@ -41,7 +41,7 @@ struct Mesh2Ctrl
 struct Mesh3Ctrl
 {
     coor_t tolerance = 100;
-    coor_t maxEdgeLenH = 0;
+    coor_t maxEdgeLenH = std::numeric_limits<coor_t>::max();
     float_t smartZRatio = 0; 
 };
 
@@ -69,8 +69,8 @@ using Point2DContainer = std::vector<Point2D<coor_t> >;
 using Point3DContainer = std::vector<Point3D<coor_t> >;
 using PolygonContainer = std::vector<Polygon2D<coor_t> >;
 using TriangulationData = Triangulation<Point2D<coor_t> >;
-using Segment2DContainer = std::vector<Segment2D<coor_t> >;
-using Segment3DContainer = std::vector<Segment3D<coor_t> >;
+using Segment2DContainer = std::list<Segment2D<coor_t> >;
+using Segment3DContainer = std::list<Segment3D<coor_t> >;
 using PolygonWithHolesContainer = std::list<PolygonWithHoles2D<coor_t> >;
 
 using StackLayerInfos = std::vector<StackLayerInfo>;

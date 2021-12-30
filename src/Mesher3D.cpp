@@ -42,8 +42,11 @@ bool Mesher3D::RunTest()
 bool Mesher3D::RunGenerateMesh()
 {
     bool res = true;
-    std::string filename = options.workPath + GENERIC_FOLDER_SEPS + options.projName;
-    log::Info("work path: %1%", filename);
+    std::string filename = GetProjFileName();
+    size_t threads = std::max<size_t>(1, options.threads);
+    log::Info("mesh config:");
+    log::Info("path: %1%", filename);
+    log::Info("threads: %1%", threads);
 
     //
     log::Info("start to load geometries from file...");
@@ -71,10 +74,11 @@ bool Mesher3D::RunGenerateMesh()
         if(layer) layer->emplace_back(toPolygon(bbox));
     }
     //wbtest
+
     //
     if(options.meshCtrl.tolerance != 0){
         log::Info("start simplify geometries... , tolerance: %1%", options.meshCtrl.tolerance);
-        res = MeshFlow3DMT::CleanGeometries(*(db.model->inGeoms), options.meshCtrl.tolerance, options.threads);
+        res = MeshFlow3DMT::CleanGeometries(*(db.model->inGeoms), options.meshCtrl.tolerance, threads);
         if(!res){
             log::Error("failed to simplify geometries, tolerance might be to large");
             return false;
@@ -89,27 +93,46 @@ bool Mesher3D::RunGenerateMesh()
 
     std::vector<Ptr<StackLayerModel> > subModels;
     StackLayerModel::GetAllLeafModels(*db.model, subModels);
+
     //
     log::Info("start extract models intersections...");
-    res = MeshFlow3DMT::ExtractModelsIntersections(subModels, options.threads);
+    res = MeshFlow3DMT::ExtractModelsIntersections(subModels, threads);
     if(!res){
         log::Error("failed to extract models intersections");
         return false;
     }
-    
+
+    //
+    coor_t maxLength = std::max(bbox.Length(), bbox.Width()) / 10;
+    coor_t minLength = std::min(bbox.Length(), bbox.Width()) / 1000;
+    options.meshCtrl.maxEdgeLenH = std::min(maxLength, options.meshCtrl.maxEdgeLenH);
+    options.meshCtrl.maxEdgeLenH = std::max(minLength, options.meshCtrl.maxEdgeLenH);
+    log::Info("start split over length edges..., length: %1%", options.meshCtrl.maxEdgeLenH);
+    res = MeshFlow3D::SplitOverlengthModelsIntersections(subModels, options.meshCtrl.maxEdgeLenH);
+    if(!res){
+        log::Error("failed to split over length edges");
+        return false;
+    }
+
+    int gradeLvl = std::max(0, options.maxGradeLvl - options.partLvl);
+    if(gradeLvl > 0){
+        log::Info("start insert grade points to mesh sketch layers..., level: %1%", gradeLvl);
+        res = MeshFlow3D::AddLayerModelsGradePoints(subModels, gradeLvl);
+        if(!res){
+            log::Error("failed to insert grade points to mesh sketch layers...");
+            return false; 
+        }
+    }
+
     //
     log::Info("start build mesh sketch models...");
     auto models = std::make_unique<std::vector<MeshSketchModel> >();
-    res = MeshFlow3D::BuildMeshSketchModels(*db.model, *models);
+    res = MeshFlow3D::BuildMeshSketchModels(subModels, *models);
     if(!res){
         log::Error("failed to build mesh sketch models");
         return false;
     }
     log::Info("total mesh sketch models: %1%", models->size());
-
-    //
-    // log::Info("start insert grade points to mesh sketch layers...");
-    // res = MeshFlow3D::AddGradePointsForMeshModels(*models, 100);
 
     //
     if(math::GT<float_t>(options.meshCtrl.smartZRatio, 1.0)){
@@ -121,24 +144,21 @@ bool Mesher3D::RunGenerateMesh()
         }
     }
 
-    coor_t maxLength = std::max(bbox.Length(), bbox.Width()) / 10;//wbtest
-    options.meshCtrl.maxEdgeLenH = maxLength;//wbtest
-
     //
     log::Info("start generate mesh per model per sketch layer...");
     auto tetVec = std::make_unique<TetrahedronDataVec>();
-    res = MeshFlow3DMT::GenerateTetrahedronVecFromSketchModels(*models, *tetVec, options.meshCtrl);
+    res = MeshFlow3D::GenerateTetrahedronVecFromSketchModels(*models, *tetVec, options.meshCtrl);
     if(!res){
         log::Error("failed to generate mesh per model per sketch layer");
         return false;
     }
     db.model.reset();
 
-    log::Info("start write layer mesh result files...");
-    for(size_t i = 0; i < tetVec->size(); ++i){
-        std::string layerFile = filename + "_" + std::to_string(i + 1);
-        MeshFlow3D::ExportResultFile(layerFile, options.oFileFormat, tetVec->at(i));
-    }
+    // log::Info("start write layer mesh result files...");
+    // for(size_t i = 0; i < tetVec->size(); ++i){
+    //     std::string layerFile = filename + "_" + std::to_string(i + 1);
+    //     MeshFlow3D::ExportResultFile(layerFile, options.oFileFormat, tetVec->at(i));
+    // }
 
     //
     log::Info("start merge mesh results...");

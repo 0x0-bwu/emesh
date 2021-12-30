@@ -67,7 +67,7 @@ def main():
     clipper.Update()
         
     dataSetMapper = vtkDataSetMapper()
-    dataSetMapper.SetInputData(clipper.GetOutput())
+    dataSetMapper.SetInputData(reader.GetOutput())
     dataSetMapper.ScalarVisibilityOff()
 
     actor = vtkActor()

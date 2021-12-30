@@ -10,8 +10,9 @@ namespace emesh {
 
 struct Mesh3Options
 {
-    size_t threads;
-    size_t partLvl;
+    int threads = 1;
+    int partLvl = 0;
+    int maxGradeLvl = 0; 
     Mesh3Ctrl meshCtrl;
     std::string workPath;
     std::string projName;
@@ -32,6 +33,7 @@ public:
     MeshSketchLayer(const MeshSketchLayer & other) = default;
     MeshSketchLayer & operator= (const MeshSketchLayer & other) = default;
 
+    void SetAdditionalPoints(SPtr<Point2DContainer> top, SPtr<Point2DContainer> bot);
     void SetConstrains(SPtr<Segment2DContainer> top, SPtr<Segment2DContainer> bot);
     void SetTopBotHeight(coor_t tH, coor_t bH);
     coor_t GetHeight() const;
@@ -59,6 +61,7 @@ public:
     SPtr<StackLayerInfos> sInfos = nullptr;
     SPtr<StackLayerPolygons> inGeoms = nullptr;
     SPtr<InterfaceIntersections> intersections = nullptr;
+    SPtr<std::vector<SPtr<Point2DContainer> > > gradePoints = nullptr;
     UPtr<StackLayerModel> subModels[4] = { nullptr, nullptr, nullptr, nullptr };
 
     StackLayerModel() = default;

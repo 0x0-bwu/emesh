@@ -2,6 +2,12 @@
 using namespace generic;
 using namespace emesh;
 
+void MeshSketchLayer::SetAdditionalPoints(SPtr<Point2DContainer> top, SPtr<Point2DContainer> bot)
+{
+    addPoints[0] = top;
+    addPoints[1] = bot;
+}
+
 void MeshSketchLayer::SetConstrains(SPtr<Segment2DContainer> top, SPtr<Segment2DContainer> bot)
 {
     constrains[0] = top;

@@ -108,9 +108,6 @@ bool ImportMshFile(const std::string & msh, Triangulation<Point2D<coor_t> > & tr
     if(!in.is_open()) return false;
     
     triangulation.Clear();
-    auto & points = triangulation.points;
-    auto & vertices = triangulation.vertices;
-    auto & triangles = triangulation.triangles;
 
     std::string line;
     size_t nodes, elements;
@@ -292,6 +289,11 @@ bool ExportMshFile(const std::string & msh, const Triangulation<Point2D<coor_t> 
 
     out.close();
     return true;    
+}
+
+bool ExportVtkFile(const std::string & vtk, const Triangulation<Point2D<coor_t> > & triangulation)
+{
+    return false;
 }
 
 bool ExportReportFile(const std::string & rpt, const MeshEvaluation2D & evaluation, bool pureText)

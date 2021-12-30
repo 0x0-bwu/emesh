@@ -48,15 +48,17 @@ bool MeshFlow2D::LoadGeometryFiles(const std::string & filename, FileFormat form
 bool MeshFlow2D::ExtractIntersections(const PolygonContainer & polygons, Segment2DContainer & segments)
 {
     segments.clear();
-    std::list<Segment2D<coor_t> > temp;
     for(const auto & polygon : polygons){
         size_t size = polygon.Size();
         for(size_t i = 0; i < size; ++i){
             size_t j = (i + 1) % size;
-            temp.emplace_back(Segment2D<coor_t>(polygon[i], polygon[j]));
+            segments.emplace_back(Segment2D<coor_t>(polygon[i], polygon[j]));
         }
     }
-    boost::polygon::intersect_segments(segments, temp.begin(), temp.end());
+    std::vector<Segment2D<coor_t> > results;
+    boost::polygon::intersect_segments(results, results.begin(), results.end());
+    segments.clear();
+    segments.insert(segments.end(), results.begin(), results.end());
     return true;
 }
 

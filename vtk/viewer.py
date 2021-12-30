@@ -31,7 +31,7 @@ def get_filename(case, layer):
         return path + case + '/' + case + '_' + str(layer) + '.vtk'
 
 def main():
-    filename = get_filename("subgds", 0)
+    filename = get_filename("fccsp", 0)
 
     # Create the reader for the data.
     reader = vtkUnstructuredGridReader()
