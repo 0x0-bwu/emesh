@@ -24,7 +24,7 @@ struct MeshOptions
     std::string workPath;
     std::string projName;
     FileFormat iFileFormat = FileFormat::DomDmc;
-    FileFormat oFileFormat = FileFormat::VTK;
+    FileFormat oFileFormat = FileFormat::MSH;
 
     void SetMesh2Options(Mesh2Options & op) const
     {

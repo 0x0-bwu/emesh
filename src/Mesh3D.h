@@ -17,7 +17,7 @@ struct Mesh3Options
     std::string workPath;
     std::string projName;
     FileFormat iFileFormat = FileFormat::DomDmc;
-    FileFormat oFileFormat = FileFormat::VTK;
+    FileFormat oFileFormat = FileFormat::MSH;
 };
 
 class MeshSketchLayer
