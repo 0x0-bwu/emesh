@@ -1,7 +1,8 @@
 import os
 Import('env')
 
-program_name ='../build/eMesher.exe'
+build_dir = env['BUILDPATH']
+program_name = build_dir + '/eMesher.exe'
 
 source_files = [
     'Mesh3D.cpp',
@@ -23,11 +24,9 @@ libs_name = [
 
 libs_path = [
     '/usr/local/lib',
-    '../build'
 ]
 
-rpath = [
-    '/usr/local/lib',
-    '../build'
-]
+rpath = []
+rpath.append(build_dir)
+
 env.Program(program_name,source_files,LIBS=libs_name,LIBPATH=libs_path, RPATH=rpath)

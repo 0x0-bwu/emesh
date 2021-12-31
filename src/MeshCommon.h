@@ -33,9 +33,10 @@ enum class FileFormat { DomDmc, WKT, MSH, VTK };
 struct Mesh2Ctrl
 {
     coor_t tolerance = 0;
-    coor_t maxEdgeLen = 0;
-    coor_t minEdgeLen = 100;
+    coor_t maxEdgeLen = std::numeric_limits<coor_t>::max();
+    coor_t minEdgeLen = 0;
     float_t minAlpha = math::Rad(15);
+    size_t refineIte = 0;
 };
 
 struct Mesh3Ctrl

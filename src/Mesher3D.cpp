@@ -44,7 +44,7 @@ bool Mesher3D::RunGenerateMesh()
     bool res = true;
     std::string filename = GetProjFileName();
     size_t threads = std::max<size_t>(1, options.threads);
-    log::Info("mesh config:");
+    log::Info("3d mesh config:");
     log::Info("path: %1%", filename);
     log::Info("threads: %1%", threads);
 
@@ -104,7 +104,7 @@ bool Mesher3D::RunGenerateMesh()
 
     //
     coor_t maxLength = std::max(bbox.Length(), bbox.Width()) / 10;
-    coor_t minLength = std::min(bbox.Length(), bbox.Width()) / 1000;
+    coor_t minLength = std::min(bbox.Length(), bbox.Width()) / 5000;
     options.meshCtrl.maxEdgeLenH = std::min(maxLength, options.meshCtrl.maxEdgeLenH);
     options.meshCtrl.maxEdgeLenH = std::max(minLength, options.meshCtrl.maxEdgeLenH);
     log::Info("start split over length edges..., length: %1%", options.meshCtrl.maxEdgeLenH);
@@ -114,10 +114,9 @@ bool Mesher3D::RunGenerateMesh()
         return false;
     }
 
-    int gradeLvl = std::max(0, options.maxGradeLvl - options.partLvl);
-    if(gradeLvl > 0){
-        log::Info("start insert grade points to mesh sketch layers..., level: %1%", gradeLvl);
-        res = MeshFlow3D::AddLayerModelsGradePoints(subModels, gradeLvl);
+    if(options.maxGradeLvl > 0){
+        log::Info("start insert grade points to mesh sketch layers..., level: %1%", options.maxGradeLvl);
+        res = MeshFlow3D::AddLayerModelsGradePoints(subModels, options.maxGradeLvl);
         if(!res){
             log::Error("failed to insert grade points to mesh sketch layers...");
             return false; 

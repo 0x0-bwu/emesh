@@ -14,7 +14,7 @@ main_env.Append(CXXFLAGS=[
     "-lpthread"
 ])
 
-debug_mode = True
+debug_mode = False
 if debug_mode :
     main_env.Append(CXXFLAGS=[
         "-g",
@@ -31,6 +31,9 @@ else :
 main_env.Append(CPPPATH=[
     cwd + '/thirdpart'
 ])
+
+# Build dir
+main_env.Append(BUILDPATH=os.path.abspath(cwd + '/build'))
 
 # SCONS scripts to build
 build_scripts = [

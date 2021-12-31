@@ -24,7 +24,6 @@ from vtkmodules.vtkRenderingCore import (
 
 def get_filename(case, layer):
     cwd = os.getcwd()
-    path = cwd + '/thirdpart/internal/testdata/wkt/'
     path = cwd + '/test/dmcdom/'
     if layer == 0 :
         return path + case + '/' + case + '.vtk'

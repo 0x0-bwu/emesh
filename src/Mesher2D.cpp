@@ -13,7 +13,7 @@ bool Mesher2D::Run()
     
     bool res = true;
     res = res && RunGenerateMesh();
-    res = res && RunMeshEvaluation();
+    //res = res && RunMeshEvaluation();
 
     CloseLogger();
     return res;
@@ -32,40 +32,49 @@ std::string Mesher2D::GetProjFileName() const
 
 bool Mesher2D::RunGenerateMesh()
 {
-    bool res(true);
+    bool res = true;
     std::string filename = GetProjFileName();
+    size_t threads = std::max<size_t>(1, options.threads);
+    log::Info("2d mesh config:");
+    log::Info("path: %1%", filename);
+    log::Info("threads: %1%", threads);
+
     //
-    log::Info("start to load geometries from file...");
+    log::Info("start load geometries from file...");
     db.inGeoms.reset(new PolygonContainer);
     res = MeshFlow2D::LoadGeometryFiles(filename, options.iFileFormat, *db.inGeoms);
     if(!res){
-        log::Error("fail to load geometry from %1%", filename);
+        log::Error("failed to load geometry from input file");
         return false;
     }
 
     if(db.inGeoms->empty()){
-        log::Error("no geometry load from file %1%", filename);
+        log::Error("no geometry loaded from input file");
         return false;
+    }
+    else{
+        log::Info("total input geometries: %1%", db.inGeoms->size());
     }
 
     //
-    log::Info("start to calculate convex hull...");
+    log::Info("start calculate convex hull...");
     auto outline = ConvexHull(*db.inGeoms);
-    // db.inGeoms->push_back(outline);//wbtest
+    db.inGeoms->push_back(outline);
     Box2D<coor_t> bbox = Extent(outline);
-    // db.inGeoms->push_back(toPolygon(bbox));/wbtest
 
-    //wbtest
-    options.meshCtrl.minEdgeLen = std::min(bbox.Length(), bbox.Width()) / 3000;
-    options.meshCtrl.maxEdgeLen = std::max(bbox.Length(), bbox.Width()) / 3;
-    options.meshCtrl.minAlpha = math::Rad(15);
+
+    coor_t maxLength = std::max(bbox.Length(), bbox.Width()) / 10;
+    coor_t minLength = std::min(bbox.Length(), bbox.Width()) / 1000;
+    options.meshCtrl.maxEdgeLen = std::min(maxLength, options.meshCtrl.maxEdgeLen);
+    options.meshCtrl.maxEdgeLen = std::max(minLength, options.meshCtrl.maxEdgeLen);
+    options.meshCtrl.minEdgeLen = minLength;
 
     //
-    log::Info("start to extract intersections...");
+    log::Info("start extract intersections...");
     db.segments.reset(new Segment2DContainer);
     res = MeshFlow2D::ExtractIntersections(*db.inGeoms, *db.segments);
     if(!res){
-        log::Error("fail to extract intersections!");
+        log::Error("failed to extract intersections!");
         return false;
     }
 
@@ -74,69 +83,72 @@ bool Mesher2D::RunGenerateMesh()
     db.points.reset(new Point2DContainer);
     
     //
-    log::Info("start to extract topology...");
+    log::Info("start extract connection topology...");
     res = MeshFlow2D::ExtractTopology(*db.segments, *db.points, *db.edges);
     if(!res){
-        log::Error("fail to extract topology!");
+        log::Error("failed to extract connection topology!");
         return false;
     }
 
     db.segments.reset();
     
     //
-    log::Info("start to merge closed points and remap edges...");
-    res = MeshFlow2D::MergeClosePointsAndRemapEdge(*db.points, *db.edges, options.meshCtrl.tolerance);
-    if(!res){
-        log::Error("fail to merge closed points and remap edges!");
-        return false;
+    if(options.meshCtrl.tolerance > 0){
+        log::Info("start merge closed points and remap edges..., tolerance: %1%", options.meshCtrl.tolerance);
+        res = MeshFlow2D::MergeClosePointsAndRemapEdge(*db.points, *db.edges, options.meshCtrl.tolerance);
+        if(!res){
+            log::Error("failed to merge closed points and remap edges!");
+            return false;
+        }
     }
 
-    // if(db.meshCtrl->maxEdgeLen > 0){
-    //     log::Info("start to split overlength edges...");
-    //     res = MeshFlow2D::SplitOverlengthEdges(*db.points, *db.edges, db.meshCtrl->maxEdgeLen);
-    //     if(!res){
-    //         log::Error("fail to split overlength edges!");
-    //         return false;
-    //     }
-    // }
+    if(options.meshCtrl.maxEdgeLen > 0){
+        log::Info("start split overlength edges..., length: %1%", options.meshCtrl.maxEdgeLen);
+        res = MeshFlow2D::SplitOverlengthEdges(*db.points, *db.edges, options.meshCtrl.maxEdgeLen);
+        if(!res){
+            log::Error("failed to split overlength edges!");
+            return false;
+        }
+    }
 
-    // {
-    //     log::Info("start to add grade points...");
-    //     size_t threshold = 10;
-    //     res = MeshFlow2D::AddPointsFromBalancedQuadTree(outline, *db.points, threshold);
-    //     if(!res){
-    //         log::Error("fail to add grade points!");
-    //         return false;
-    //     }
-    // }
-
-    db.triangulation.reset(new TriangulationData);
+    if(options.maxGradeLvl > 0){
+        size_t size = db.points->size();
+        log::Info("start insert grade points..., level: %1%", options.maxGradeLvl);
+        res = MeshFlow2D::AddPointsFromBalancedQuadTree(*db.points, *db.edges, options.maxGradeLvl);
+        if(!res){
+            log::Error("failed to insert grade points!");
+            return false;
+        }
+        else{
+            log::Info("total added grade points: %1%", db.points->size() - size);
+        }
+    }
     
-    log::Info("start to generate mesh...");
+    log::Info("start generate mesh...");
+    db.triangulation.reset(new TriangulationData);
     res = MeshFlow2D::TriangulatePointsAndEdges(*db.points, *db.edges, *db.triangulation);
     if(!res){
-        log::Error("fail to generate mesh!");
+        log::Error("failed to generate mesh!");
         return false;
     }
 
     db.edges.reset();
     db.points.reset();
 
-    log::Info("start to refine mesh...");
-    size_t iteration = 5000;//wbtest
-    res = MeshFlow2D::TriangulationRefinement(*db.triangulation, options.meshCtrl.minAlpha, options.meshCtrl.minEdgeLen, options.meshCtrl.maxEdgeLen, iteration);
-    if(!res){
-        log::Error("fail to refine mesh!");
-        return false;
+    if(options.meshCtrl.refineIte > 0){
+        log::Info("start refine mesh...");
+        MeshFlow2D::TriangulationRefinement(*db.triangulation, options.meshCtrl);
     }
-    
-    log::Info("start to write mesh result...");
+
+    log::Info("start write mesh result...");
     res = MeshFlow2D::ExportMeshResult(filename, options.oFileFormat, *db.triangulation);
     if(!res){
-        log::Error("fail to write mesh result!");
+        log::Error("failed to write mesh result!");
         return false;
     }
-    else { log::Info("write mesh result to %1%", filename); }
+
+    log::Info("total nodes: %1%", db.triangulation->vertices.size());
+    log::Info("total elements: %1%", db.triangulation->triangles.size());
 
     return true;
 }
@@ -166,11 +178,11 @@ bool Mesher2D::RunMeshEvaluation()
         return false;
     }
 
-    log::Info("start to generate mesh report...");
+    log::Info("start generate mesh report...");
     std::string rptFile = GetProjFileName() + ".rpt";
     auto res = MeshFlow2D::GenerateReport(rptFile, *db.triangulation);
     if(!res){
-        log::Error("fail to generate mesh report");
+        log::Error("failed to generate mesh report");
         return false;
     }
 

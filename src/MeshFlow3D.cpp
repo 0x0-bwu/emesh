@@ -372,23 +372,6 @@ bool MeshFlow3D::ExtractTopology(const MeshSketchLayer & layer, Point3DContainer
             addEdge(std::move(e));
         }
     }
-
-    //boundary
-    // std::vector<Point2D<coor_t> > outline(4);
-    // outline[0] = layer.bbox[0];
-    // outline[1] = Point2D<coor_t>(layer.bbox[1][0], layer.bbox[0][1]);
-    // outline[2] = layer.bbox[1];
-    // outline[3] = Point2D<coor_t>(layer.bbox[0][0], layer.bbox[1][1]);
-
-    // for(size_t i = 0; i < 4; ++i){
-    //     size_t j = (i + 1) % 4;
-    //     IndexEdge top(getIndex(outline[i], 0), getIndex(outline[j], 0));
-    //     IndexEdge bot(getIndex(outline[i], 1), getIndex(outline[j], 1));
-    //     IndexEdge side(getIndex(outline[i], 0), getIndex(outline[i], 1));
-    //     addEdge(std::move(top));
-    //     addEdge(std::move(bot));
-    //     addEdge(std::move(side));
-    // }
     return true;
 }
 
@@ -457,43 +440,6 @@ bool MeshFlow3D::ExtractTopology(const MeshSketchLayer & layer, Point3DContainer
 //     }
 //     return true;
 // }
-
-bool MeshFlow3D::SplitOverlengthEdges(Point3DContainer & points, std::list<IndexEdge> & edges, coor_t maxLength, bool surfaceOnly)
-{
-    if(0 == maxLength) return true;
-    coor_t maxLenSq = maxLength * maxLength;
-
-    auto lenSq = [&points](const IndexEdge & e) { return DistanceSq(points[e.v1()], points[e.v2()]); };
-    auto split = [&points](const IndexEdge & e) mutable
-    {
-        size_t index = points.size();
-        points.push_back((points[e.v1()] + points[e.v2()]) * 0.5);
-        return std::make_pair(IndexEdge(e.v1(), index), IndexEdge(index, e.v2()));
-    };
-    auto isVertical = [&points](const IndexEdge & e)
-    {
-        const auto & p1 = points[e.v1()];
-        const auto & p2 = points[e.v2()];
-        return p1[0] == p2[0] && p1[1] == p2[1];
-    };
-
-    auto iter = edges.begin();
-    while(iter != edges.end()){
-        if(surfaceOnly && isVertical(*iter)){
-            ++iter; continue;
-        }
-        else if(lenSq(*iter) <= maxLenSq){
-            ++iter; continue;
-        }
-        else{
-            auto [e1, e2] = split(*iter);
-            iter = edges.erase(iter);
-            iter = edges.insert(iter, e2);
-            iter = edges.insert(iter, e1);
-        }
-    }
-    return true;
-}
 
 bool MeshFlow3D::WriteNodeAndEdgeFiles(const std::string & filename, const Point3DContainer & points, const std::list<IndexEdge> & edges)
 {

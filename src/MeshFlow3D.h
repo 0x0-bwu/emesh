@@ -31,7 +31,6 @@ public:
     static bool GenerateTetrahedronDataFromSketchModel(std::vector<MeshSketchModel> & models, size_t index, TetrahedronData & tet, const Mesh3Ctrl & ctrl);
     static bool GenerateTetrahedronDataFromSketchLayer(const MeshSketchLayer & layer, TetrahedronData & tet, const Mesh3Ctrl & ctrl);
     static bool ExtractTopology(const MeshSketchLayer & layer, Point3DContainer & points, std::list<IndexFace> & faces, std::list<IndexEdge> & edges);
-    static bool SplitOverlengthEdges(Point3DContainer & points, std::list<IndexEdge> & edges, coor_t maxLength, bool surfaceOnly = true);
     static bool WriteNodeAndEdgeFiles(const std::string & filename, const Point3DContainer & points, const std::list<IndexEdge> & edges);
     static bool LoadLayerStackInfos(const std::string & filename, StackLayerInfos & infos);
     static bool Tetrahedralize(const Point3DContainer & points, const std::list<std::vector<size_t> > & faces, const std::list<IndexEdge> & edges, TetrahedronData & tet);
@@ -40,7 +39,7 @@ public:
 
     static bool SliceOverheightLayers(std::list<MeshSketchLayer> & layers, float_t ratio);
     static void Polygons2Segments(const PolygonContainer & layer, std::list<Segment2D<coor_t> > & segments);
-    static std::unique_ptr<Point2DContainer> AddPointsFromBalancedQuadTree(const Segment2DContainer & segments, size_t threshold);
+    static std::unique_ptr<Point2DContainer> AddPointsFromBalancedQuadTree(const Segment2DContainer & segments, size_t maxLevel);
 };
 
 class MeshFlow3DMT

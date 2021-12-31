@@ -10,9 +10,9 @@ namespace emesh {
 
 struct Mesh3Options
 {
-    int threads = 1;
-    int partLvl = 0;
-    int maxGradeLvl = 0; 
+    size_t threads = 1;
+    size_t partLvl = 0;
+    size_t maxGradeLvl = 0; 
     Mesh3Ctrl meshCtrl;
     std::string workPath;
     std::string projName;

@@ -12,7 +12,8 @@ using namespace generic::geometry::tri;
 using generic::common::float_type;
 struct Mesh2Options
 {
-    size_t threads;
+    size_t threads = 1;
+    size_t maxGradeLvl = 0;
     Mesh2Ctrl meshCtrl;
     std::string workPath;
     std::string projName;

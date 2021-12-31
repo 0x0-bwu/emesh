@@ -293,7 +293,41 @@ bool ExportMshFile(const std::string & msh, const Triangulation<Point2D<coor_t> 
 
 bool ExportVtkFile(const std::string & vtk, const Triangulation<Point2D<coor_t> > & triangulation)
 {
-    return false;
+    std::ofstream out(vtk);
+    if(!out.is_open()) return false;
+
+    const auto & points = triangulation.points;
+    const auto & vertices = triangulation.vertices;   
+    const auto & triangles = triangulation.triangles;
+
+    char sp(32);
+    out << "# vtk DataFile Version 2.0" << GENERIC_DEFAULT_EOL;
+    out << "Unstructured Grid" << GENERIC_DEFAULT_EOL;
+    out << "ASCII" << GENERIC_DEFAULT_EOL;
+    out << "DATASET UNSTRUCTURED_GRID" << GENERIC_DEFAULT_EOL;
+    out << "POINTS" << sp << vertices.size() << sp << common::toString<coor_t>() << GENERIC_DEFAULT_EOL;
+    for(const auto & vertex : vertices){
+        const auto & point = points[vertex.index];
+        out << point[0] << sp << point[1] << sp << '0' << GENERIC_DEFAULT_EOL;
+    }
+
+    out << GENERIC_DEFAULT_EOL; 
+    out << "CELLS" << sp << triangles.size() << sp << triangles.size() * 4 << GENERIC_DEFAULT_EOL;
+    for(const auto & triangle : triangles){
+        out << '3';
+        for(size_t i = 0; i < 3; ++i){
+            out << sp << triangle.vertices[i];
+        }
+        out << GENERIC_DEFAULT_EOL; 
+    }
+    out << GENERIC_DEFAULT_EOL;
+
+    out << "CELL_TYPES" << sp << triangles.size() << GENERIC_DEFAULT_EOL;
+    for(size_t i = 0; i < triangles.size(); ++i){
+        out << "5" << GENERIC_DEFAULT_EOL;
+    }
+    out.close();
+    return true;
 }
 
 bool ExportReportFile(const std::string & rpt, const MeshEvaluation2D & evaluation, bool pureText)

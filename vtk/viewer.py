@@ -23,7 +23,6 @@ from vtkmodules.vtkRenderingCore import (
 
 def get_filename(case, layer):
     cwd = os.getcwd()
-    # path = cwd + '/thirdpart/internal/testdata/wkt/'
     path = cwd + '/test/dmcdom/'
     if layer == 0 :
         return path + case + '/' + case + '.vtk'
@@ -31,7 +30,7 @@ def get_filename(case, layer):
         return path + case + '/' + case + '_' + str(layer) + '.vtk'
 
 def main():
-    filename = get_filename("fccsp", 0)
+    filename = get_filename("subgds", 0)
 
     # Create the reader for the data.
     reader = vtkUnstructuredGridReader()

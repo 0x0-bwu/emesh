@@ -6,7 +6,9 @@
 #include "generic/geometry/Utility.hpp"
 #include "generic/tools/FileSystem.hpp"
 #include "generic/tools/Tools.hpp"
+#include "generic/tools/Log.hpp"
 #include "MeshIO.h"
+#include <boost/geometry/index/rtree.hpp>
 using namespace generic;
 using namespace emesh;
 bool MeshFlow2D::LoadGeometryFiles(const std::string & filename, FileFormat format, PolygonContainer & polygons)
@@ -56,7 +58,7 @@ bool MeshFlow2D::ExtractIntersections(const PolygonContainer & polygons, Segment
         }
     }
     std::vector<Segment2D<coor_t> > results;
-    boost::polygon::intersect_segments(results, results.begin(), results.end());
+    boost::polygon::intersect_segments(results, segments.begin(), segments.end());
     segments.clear();
     segments.insert(segments.end(), results.begin(), results.end());
     return true;
@@ -128,32 +130,70 @@ bool MeshFlow2D::SplitOverlengthEdges(Point2DContainer & points, std::list<Index
     return true;
 }
 
-bool MeshFlow2D::AddPointsFromBalancedQuadTree(const Polygon2D<coor_t> & outline, Point2DContainer & points, size_t threshold)
-{    
-    std::list<Point2D<coor_t> * > objs;
-    for(size_t i = 0; i < points.size(); ++i)
-        objs.push_back(&points[i]);
+bool MeshFlow2D::AddPointsFromBalancedQuadTree(Point2DContainer & points, std::list<IndexEdge> & edges, size_t maxLevel)
+{
+    Box2D<coor_t> bbox;
+    std::list<Point2D<coor_t> * > pts;
+    for(auto & point : points){
+        bbox |= point;
+        pts.push_back(&point);
+    }
+
+    using QuadTree = tree::QuadTree<coor_t, Point2D<coor_t>, PointExtent>;
+    using QuadNode = typename QuadTree::QuadNode;
+    using RectNode = std::pair<Box2D<coor_t>, CPtr<IndexEdge > >;
+    using RectTree = boost::geometry::index::rtree<RectNode, boost::geometry::index::dynamic_rstar>;
     
-    threshold = std::max(size_t(1), threshold);
-    Box2D<coor_t> bbox = Extent(outline);
-    using Tree = tree::QuadTree<coor_t, Point2D<coor_t>, PointExtent>;
-    using Node = typename Tree::QuadNode;
-    using TreeBuilder = tree::QuadTreeBuilderMT<Point2D<coor_t>, Tree>;
-    Tree tree(bbox);
-    TreeBuilder builder(tree);
-    builder.Build(objs, threshold);
+    QuadTree quadTree(bbox);
+    quadTree.Build(pts, 0);
+    auto condition = [&maxLevel](QuadNode * node)
+    {
+        auto bbox = node->GetBBox();
+        return node->GetLevel() < maxLevel && node->GetObjs().size() > 0 && std::min(bbox.Length(), bbox.Width()) > 1; 
+    };
 
-    tree.Balance();
+    QuadTree::CreateSubNodesIf(&quadTree, condition);
 
-    std::list<Node * > leafNodes;
-    Tree::GetAllLeafNodes(&tree, leafNodes);
+    quadTree.Balance();
+    std::list<QuadNode * > leafNodes;
+    QuadTree::GetAllLeafNodes(&quadTree, leafNodes);
 
+    boost::geometry::index::dynamic_rstar para(16);
+    RectTree rectTree(para);
+    for(const auto & edge : edges){
+        Box2D<coor_t> box;
+        box |= points[edge.v1()];
+        box |= points[edge.v2()];
+        rectTree.insert(std::make_pair(box, &edge));
+    }
+
+    auto ptEdgeDistSq = [&points](const Point2D<coor_t> & p, const IndexEdge & edge)
+    {
+        return PointSegmentDistanceSq(p, Segment2D<coor_t>(points[edge.v1()], points[edge.v2()]));
+    };
+
+    std::vector<RectNode> rectNodes;
     for(auto node : leafNodes){
         if(node->GetObjs().size() > 0) continue;
         const auto & box = node->GetBBox();
         Point2D<coor_t> ct = box.Center().Cast<coor_t>();
-        if(Contains(outline, ct))
-            points.emplace_back(std::move(ct));
+
+        rectNodes.clear();
+        Box2D<coor_t> searchBox(ct, ct);
+        rectTree.query(boost::geometry::index::intersects(searchBox), std::back_inserter(rectNodes));
+
+        if(rectNodes.empty()) points.emplace_back(std::move(ct));
+        else{
+            bool flag = true;
+            float_t distSq = std::min(box.Width(), box.Length());
+            distSq = 0.7 * distSq * distSq;
+            for(const auto & rectNode : rectNodes){
+                if(ptEdgeDistSq(ct, *rectNode.second) < distSq){
+                    flag = false; break;
+                }
+            }
+            if(flag) points.emplace_back(std::move(ct)); 
+        }            
     }
     return true;
 }
@@ -174,13 +214,35 @@ bool MeshFlow2D::TriangulatePointsAndEdges(const Point2DContainer & points, cons
     return true;
 }
 
-bool MeshFlow2D::TriangulationRefinement(Triangulation<Point2D<coor_t> > & triangulation, float_t minAlpha, coor_t minLen, coor_t maxLen, size_t iteration)
+bool MeshFlow2D::TriangulationRefinement(Triangulation<Point2D<coor_t> > & triangulation, const Mesh2Ctrl & ctrl)
 {
     // ChewSecondRefinement2D<coor_t> refinement(triangulation);
-    JonathanRefinement2D<coor_t> refinement(triangulation);
-    refinement.SetParas(minAlpha, minLen, maxLen);
-    refinement.Refine(iteration);
-    refinement.ReallocateTriangulation();
+    // JonathanRefinement2D<coor_t> refinement(triangulation);
+    // refinement.SetParas(ctrl.minAlpha, ctrl.minEdgeLen, ctrl.maxEdgeLen);
+    // refinement.Refine(iteration);
+    // refinement.ReallocateTriangulation();
+    // return true;
+
+    // Try iterations temporarily
+    // Since the refinement algrithom is not very stable
+    size_t perStep = 1000;
+    for(size_t i = 0; i < ctrl.refineIte; ++i){
+        Triangulation<Point2D<coor_t> > backup = triangulation;
+        try {
+            JonathanRefinement2D<coor_t> refinement(backup);
+            refinement.SetParas(ctrl.minAlpha, ctrl.minEdgeLen, ctrl.maxEdgeLen);
+            refinement.Refine(perStep);
+            refinement.ReallocateTriangulation();  
+        }
+        catch (...){
+            log::Info("failed to refine mesh at iteration %1%, will use former result", i + 1);
+            return false;
+        }
+        std::swap(backup, triangulation);
+        size_t nodes = triangulation.vertices.size() - backup.vertices.size();
+        size_t elements = triangulation.triangles.size() - backup.triangles.size();
+        log::Info("refine iteration: %1%/%2%, node increase: %3%, element increase: %4%", i + 1, ctrl.refineIte, nodes, elements);
+    }
     return true;
 }
 
@@ -190,6 +252,10 @@ bool MeshFlow2D::ExportMeshResult(const std::string & filename, FileFormat forma
         case FileFormat::MSH : {
             std::string msh = filename + ".msh";
             return io::ExportMshFile(msh, triangulation);
+        }
+        case FileFormat::VTK : {
+            std::string vtk = filename + ".vtk";
+            return io::ExportVtkFile(vtk, triangulation);
         }
         default : return false;
     }

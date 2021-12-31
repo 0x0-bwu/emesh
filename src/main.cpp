@@ -16,7 +16,11 @@ struct MeshOptions
     int threads = 1;
     int partLvl = 0;
     int maxGradeLvl = 0;
+    int tolerance = 0;
+    int maxEdgeLen = 0;
+    int refineIte = 0;
     double smartZRatio = 1.0;
+    double minAlpha = 15;//deg
     std::string workPath;
     std::string projName;
     FileFormat iFileFormat = FileFormat::DomDmc;
@@ -24,7 +28,15 @@ struct MeshOptions
 
     void SetMesh2Options(Mesh2Options & op) const
     {
-        //todo
+        op.threads = threads;
+        op.maxGradeLvl = maxGradeLvl;
+        op.workPath = workPath;
+        op.projName = projName;
+        op.iFileFormat = iFileFormat;
+        op.oFileFormat = oFileFormat;
+        op.meshCtrl.minAlpha = math::Rad(minAlpha);
+        op.meshCtrl.refineIte = refineIte;
+        op.meshCtrl.maxEdgeLen = maxEdgeLen;
     }
 
     void SetMesh3Options(Mesh3Options & op) const
@@ -37,6 +49,8 @@ struct MeshOptions
         op.iFileFormat = iFileFormat;
         op.oFileFormat = oFileFormat;
         op.meshCtrl.smartZRatio = smartZRatio;
+        op.meshCtrl.tolerance = tolerance;
+        op.meshCtrl.maxEdgeLenH = maxEdgeLen;
     }
 };
 
@@ -49,15 +63,19 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
 {
     using namespace program_options;
     OptionParser op("mesh options");
-    auto testOption = op.Add<Switch>("t", "test", "test flow");
+    auto testOption = op.Add<Switch>("b", "beta", "test flow");
 	auto helpOption = op.Add<Switch>("h", "help", "produce help message");
     auto surfOption = op.Add<Switch>("s", "surface", "planer surface mesh");
-    auto ifmtOption = op.Add<Value<std::string> >("i", "input", "input file format", "wkt");
+    auto ifmtOption = op.Add<Value<std::string> >("i", "input", "input file format", "dmcdom");
     auto ofmtOption = op.Add<Value<std::string> >("o", "output", "output file format", "vtk");
     auto jobsOption = op.Add<Value<int> >("j", "jobs", "cpu core numbers in use", 1);
-    auto partOption = op.Add<Value<int> >("p", "partition", "partition level", 0);
+    auto partOption = op.Add<Value<int> >("p", "partition", "partition level(3d)", 0);
     auto grdeOption = op.Add<Value<int> >("g", "gradelevel", "grade level", 0);
-    auto smtZOption = op.Add<Value<double> >("z", "ratioz", "vertical slice ratio", 1.0);
+    auto smtZOption = op.Add<Value<double> >("z", "ratioz", "vertical slice ratio(3d)", 1.0);
+    auto toleOption = op.Add<Value<int> >("t", "tolerance", "tolerance to simplify input geometries", 0);
+    auto iterOption = op.Add<Value<int> >("r", "refine", "mesh refine iteration(2d)", 0);
+    auto aphaOption = op.Add<Value<double> >("a", "alpha", "minimum angle(unit: deg) of refinement(2d)", 15);
+    auto maxEOption = op.Add<Value<int> >("l", "maxlen", "max edge length", 0);
     try {
         op.Parse(argc, argv);
 
@@ -69,6 +87,7 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
         //help
         if(helpOption->isSet()){
             mOp.printHelpMsg = true;
+            os << op.Help();
             return true;
         }
         
@@ -132,6 +151,30 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
             double ratio = smtZOption->GetValue();
             if(ratio > 1.0) mOp.smartZRatio = ratio;
         }
+
+        //tolerance
+        if(toleOption->isSet()){
+            int tolerance = toleOption->GetValue();
+            if(tolerance > 0) mOp.tolerance = tolerance;
+        }
+
+        //refine
+        if(iterOption->isSet()){
+            int refineIte = iterOption->GetValue();
+            if(refineIte > 0) mOp.refineIte = refineIte;
+        }
+
+        //minimum angle
+        if(aphaOption->isSet()){
+            double alpha = aphaOption->GetValue();
+            if(0 < alpha && alpha < 30) mOp.minAlpha = alpha;
+        }
+
+        //max edge length
+        if(maxEOption->isSet()){
+            double len = maxEOption->GetValue();
+            if(len > 0) mOp.maxEdgeLen = len;
+        }
         return true;
     }
     catch (const InvalidOption & e)
@@ -167,7 +210,6 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
 
     if(options.printHelpMsg){
-        PrintHelpMessage(os);
         return EXIT_SUCCESS;
     }
 
@@ -176,8 +218,6 @@ int main(int argc, char *argv[])
         auto mesher = std::unique_ptr<Mesher2D>(new Mesher2D);
         options.SetMesh2Options(mesher->options);
         res = mesher->Run();
-        // os << "Error: plainer surface mesh currently disabled!" << std::endl;
-        // return EXIT_FAILURE;
     }
     else{
         auto mesher = std::unique_ptr<Mesher3D>(new Mesher3D);
