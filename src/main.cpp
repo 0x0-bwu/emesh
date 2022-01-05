@@ -17,7 +17,7 @@ struct MeshOptions
     int partLvl = 0;
     int maxGradeLvl = 0;
     int tolerance = 0;
-    int maxEdgeLen = 0;
+    int maxEdgeLen = std::numeric_limits<int>::max();
     int refineIte = 0;
     double smartZRatio = 1.0;
     double minAlpha = 15;//deg
@@ -53,11 +53,6 @@ struct MeshOptions
         op.meshCtrl.maxEdgeLenH = maxEdgeLen;
     }
 };
-
-void PrintHelpMessage(std::ostream & os = std::cout)
-{
-    os << "will add help message soon..." << std::endl;
-}
 
 bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os = std::cout)
 {

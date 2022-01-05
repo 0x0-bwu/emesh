@@ -25,6 +25,7 @@ bool MeshFlow2D::LoadGeometryFiles(const std::string & filename, FileFormat form
                     if(result.second){
                         for(auto & polygon : *result.second)
                             polygons.emplace_back(std::move(polygon));
+                        break;//wbtest
                     }
                 }
                 return true;

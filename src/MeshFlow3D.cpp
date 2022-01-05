@@ -25,10 +25,16 @@ bool MeshFlow3D::LoadGeometryFiles(const std::string & filename, FileFormat form
                 if(!io::ImportDomDmcFiles(dom, dmc, *results)) return false;
                 if(results->size() != infos.size()) return false;
 
-                size_t i = 0;
-                for(auto result : *results)
-                    polygons[i++] = result.second;
-                
+                auto iter = results->begin();
+                for(size_t i = 0; i < infos.size(); ++i){
+                    if(iter == results->end()){
+                        log::Error("failed to import geometries at layer %1%", i + 1);
+                        return false;
+                    }
+                    GENERIC_ASSERT(iter->second)
+                    polygons[i] = iter->second;
+                    iter++;
+                }                
                 return true;
             }
             case FileFormat::WKT : {

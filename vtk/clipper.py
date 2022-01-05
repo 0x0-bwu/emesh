@@ -73,7 +73,7 @@ def main():
     actor.SetMapper(dataSetMapper)
     actor.GetProperty().SetDiffuseColor(colors.GetColor3d('tomato'))
     actor.GetProperty().EdgeVisibilityOn()
-    actor.GetProperty().SetLineWidth(0.2)
+    actor.GetProperty().SetLineWidth(0.8)
     # actor.SetScale(1.0, 1.0, 50)
 
     trans = vtkTransform()
