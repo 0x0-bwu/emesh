@@ -30,6 +30,17 @@ using SPtr = std::shared_ptr<T, Args...>;
 
 enum class FileFormat { DomDmc, WKT, MSH, VTK };
 
+inline std::string toString(FileFormat fmt)
+{
+    switch (fmt){
+        case FileFormat::DomDmc : return "domdmc";
+        case FileFormat::WKT : return "wkt";
+        case FileFormat::MSH : return "msh";
+        case FileFormat::VTK : return "vtk";
+        default : return std::string{};
+    }
+}
+
 struct Mesh2Ctrl
 {
     coor_t tolerance = 0;

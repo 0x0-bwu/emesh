@@ -7,6 +7,7 @@ class MeshFlow2D
 public:
     static bool LoadGeometryFiles(const std::string & filename, FileFormat format, PolygonContainer & polygons);
     static bool ExtractIntersections(const PolygonContainer & polygons, Segment2DContainer & segments);
+    static bool MergeClosestSegments(Segment2DContainer & segments, coor_t tolorance);
     static bool ExtractTopology(const Segment2DContainer & segments, Point2DContainer & points, std::list<IndexEdge> & edges);
     static bool MergeClosePointsAndRemapEdge(Point2DContainer & points, std::list<IndexEdge> & edges, coor_t tolorance);
     static bool SplitOverlengthEdges(Point2DContainer & points, std::list<IndexEdge> & edges, coor_t maxLength);

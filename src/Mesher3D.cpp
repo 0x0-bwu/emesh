@@ -168,7 +168,7 @@ bool Mesher3D::RunGenerateMesh()
         return false;
     }
 
-    log::Info("start write final mesh result file...");
+    log::Info("start write final mesh result file..., output file format: %1%", toString(options.oFileFormat));
     MeshFlow3D::ExportResultFile(filename, options.oFileFormat, *db.tetras);
 
     log::Info("total nodes: %1%", db.tetras->vertices.size());

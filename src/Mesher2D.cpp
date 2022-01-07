@@ -83,6 +83,14 @@ bool Mesher2D::RunGenerateMesh()
     db.points.reset(new Point2DContainer);
     
     //
+    log::Info("start merge near edges..., tolerance: %1%", options.meshCtrl.tolerance);
+    res = MeshFlow2D::MergeClosestSegments(*db.segments, options.meshCtrl.tolerance);
+    if(!res){
+        log::Error("failed to merge near edges!");
+        return false;
+    }
+    
+    //
     log::Info("start extract connection topology...");
     res = MeshFlow2D::ExtractTopology(*db.segments, *db.points, *db.edges);
     if(!res){
@@ -94,7 +102,7 @@ bool Mesher2D::RunGenerateMesh()
     
     //
     if(options.meshCtrl.tolerance > 0){
-        log::Info("start merge closed points and remap edges..., tolerance: %1%", options.meshCtrl.tolerance);
+        log::Info("start merge near points and remap edges..., tolerance: %1%", options.meshCtrl.tolerance);
         res = MeshFlow2D::MergeClosePointsAndRemapEdge(*db.points, *db.edges, options.meshCtrl.tolerance);
         if(!res){
             log::Error("failed to merge closed points and remap edges!");
@@ -131,6 +139,8 @@ bool Mesher2D::RunGenerateMesh()
         log::Error("failed to generate mesh!");
         return false;
     }
+    log::Info("total nodes: %1%", db.triangulation->vertices.size());
+    log::Info("total elements: %1%", db.triangulation->triangles.size());
 
     db.edges.reset();
     db.points.reset();
@@ -140,16 +150,12 @@ bool Mesher2D::RunGenerateMesh()
         MeshFlow2D::TriangulationRefinement(*db.triangulation, options.meshCtrl);
     }
 
-    log::Info("start write mesh result...");
+    log::Info("start write mesh result..., output file format: %1%", toString(options.oFileFormat));
     res = MeshFlow2D::ExportMeshResult(filename, options.oFileFormat, *db.triangulation);
     if(!res){
         log::Error("failed to write mesh result!");
         return false;
     }
-
-    log::Info("total nodes: %1%", db.triangulation->vertices.size());
-    log::Info("total elements: %1%", db.triangulation->triangles.size());
-
     return true;
 }
 

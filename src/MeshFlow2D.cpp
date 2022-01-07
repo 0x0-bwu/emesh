@@ -9,6 +9,8 @@
 #include "generic/tools/Log.hpp"
 #include "MeshIO.h"
 #include <boost/geometry/index/rtree.hpp>
+#include <boost/polygon/voronoi_builder.hpp>
+#include <boost/polygon/voronoi.hpp>
 using namespace generic;
 using namespace emesh;
 bool MeshFlow2D::LoadGeometryFiles(const std::string & filename, FileFormat format, PolygonContainer & polygons)
@@ -25,7 +27,6 @@ bool MeshFlow2D::LoadGeometryFiles(const std::string & filename, FileFormat form
                     if(result.second){
                         for(auto & polygon : *result.second)
                             polygons.emplace_back(std::move(polygon));
-                        break;//wbtest
                     }
                 }
                 return true;
@@ -62,6 +63,47 @@ bool MeshFlow2D::ExtractIntersections(const PolygonContainer & polygons, Segment
     boost::polygon::intersect_segments(results, segments.begin(), segments.end());
     segments.clear();
     segments.insert(segments.end(), results.begin(), results.end());
+    return true;
+}
+
+bool MeshFlow2D::MergeClosestSegments(Segment2DContainer & segments, coor_t tolorance)
+{
+    using namespace boost::polygon;
+    voronoi_diagram<float_t> vd;
+    voronoi_builder<int32_t> builder;
+    std::unordered_map<size_t, CPtr<Segment2D<coor_t> > > segIdxMap;
+    for(auto & segment : segments){
+        const auto & low  = segment[0];
+        const auto & high = segment[1];
+        auto index = builder.insert_segment(low[0], low[1], high[0], high[1]);
+        segIdxMap.insert(std::make_pair(index, &segment));
+    }
+    builder.construct(&vd);
+    
+    auto minDist = std::numeric_limits<float_t>::max();
+    using Edge = voronoi_edge<float_t>;
+    std::unordered_set<CPtr<Edge> > visited;
+
+    size_t idx1, idx2;
+    auto iter = vd.edges().begin();
+    for(; iter != vd.edges().end(); ++iter){
+        if(!iter->is_primary()) continue;
+        auto twin = iter->twin();
+        auto self = twin->twin();
+        if(visited.count(self)) continue;
+        visited.insert(twin);
+
+        auto cell = iter->cell();
+        idx1 = cell->source_index();
+        cell = twin->cell();
+        idx2 = cell->source_index();
+        const auto & seg1 = *segIdxMap.at(idx1);
+        const auto & seg2 = *segIdxMap.at(idx2);
+        if(0 != orientation(seg1, seg2)) continue;
+        auto dist = euclidean_distance(seg1, seg2);
+        if(dist < minDist) minDist = dist;
+    }
+    log::Info("minimum distance: %1%", minDist);
     return true;
 }
 
@@ -209,7 +251,6 @@ bool MeshFlow2D::TriangulatePointsAndEdges(const Point2DContainer & points, cons
         triangulator.EraseOuterTriangles();
     }
     catch (...) {
-        tri.Clear();
         return false;
     }
     return true;
@@ -226,23 +267,30 @@ bool MeshFlow2D::TriangulationRefinement(Triangulation<Point2D<coor_t> > & trian
 
     // Try iterations temporarily
     // Since the refinement algrithom is not very stable
-    size_t perStep = 1000;
+    bool refined = false;
+    size_t perStep = 5000;
     for(size_t i = 0; i < ctrl.refineIte; ++i){
         Triangulation<Point2D<coor_t> > backup = triangulation;
         try {
             JonathanRefinement2D<coor_t> refinement(backup);
             refinement.SetParas(ctrl.minAlpha, ctrl.minEdgeLen, ctrl.maxEdgeLen);
             refinement.Refine(perStep);
-            refinement.ReallocateTriangulation();  
+            refinement.ReallocateTriangulation();
+            refined = refinement.Refined();  
         }
         catch (...){
             log::Info("failed to refine mesh at iteration %1%, will use former result", i + 1);
             return false;
         }
         std::swap(backup, triangulation);
-        size_t nodes = triangulation.vertices.size() - backup.vertices.size();
-        size_t elements = triangulation.triangles.size() - backup.triangles.size();
-        log::Info("refine iteration: %1%/%2%, node increase: %3%, element increase: %4%", i + 1, ctrl.refineIte, nodes, elements);
+        size_t nodes = triangulation.vertices.size();
+        size_t elements = triangulation.triangles.size();
+        log::Info("refine iteration: %1%/%2%, total nodes: %3%, total elements: %4%", i + 1, ctrl.refineIte, nodes, elements);
+        
+        if(refined){
+            log::Info("mesh refined, stop iteration");
+            break;
+        }
     }
     return true;
 }

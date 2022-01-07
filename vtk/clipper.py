@@ -31,7 +31,7 @@ def get_filename(case, layer):
         return path + case + '/' + case + '_' + str(layer) + '.vtk'
 
 def main():
-    filename = get_filename("subgds", 0)
+    filename = get_filename("fccsp", 0)
 
     # Create the reader for the data.
     reader = vtkUnstructuredGridReader()
@@ -53,17 +53,17 @@ def main():
     interactor = vtkRenderWindowInteractor()
     interactor.SetRenderWindow(renderWindow)
     
-    xnorm = [0, -1, 0]
-    clipPlane = vtkPlane()
-    clipPlane.SetOrigin(reader.GetOutput().GetCenter())
-    clipPlane.SetNormal(xnorm)
+    # xnorm = [0, -1, 0]
+    # clipPlane = vtkPlane()
+    # clipPlane.SetOrigin(reader.GetOutput().GetCenter())
+    # clipPlane.SetNormal(xnorm)
     
-    clipper = vtkTableBasedClipDataSet()
-    clipper.SetClipFunction(clipPlane)
-    clipper.SetInputData(reader.GetOutput())
-    clipper.SetValue(0.0)
-    clipper.GenerateClippedOutputOn()
-    clipper.Update()
+    # clipper = vtkTableBasedClipDataSet()
+    # clipper.SetClipFunction(clipPlane)
+    # clipper.SetInputData(reader.GetOutput())
+    # clipper.SetValue(0.0)
+    # clipper.GenerateClippedOutputOn()
+    # clipper.Update()
         
     dataSetMapper = vtkDataSetMapper()
     dataSetMapper.SetInputData(reader.GetOutput())
