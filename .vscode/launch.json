@@ -10,7 +10,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/eMesher.exe",
-            "args": ["${workspaceFolder}/test/dmcdom/fccsp/fccsp", "-o", "vtk", "-s", "-r", "10", "-a", "25"],
+            "args": ["${workspaceFolder}/test/dmcdom/test/test", "-o", "vtk", "-s", "-r", "30", "-a", "25"],
             // "args": ["${workspaceFolder}/test/dmcdom/subgds/subgds","-s","-i", "dmcdom", "-o", "vtk", "-j","4", "-p", "0", "-z", "2.0", "-g", "0", "-r", "20", "-a", "20"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

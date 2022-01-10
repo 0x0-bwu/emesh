@@ -66,44 +66,50 @@ bool MeshFlow2D::ExtractIntersections(const PolygonContainer & polygons, Segment
     return true;
 }
 
-bool MeshFlow2D::MergeClosestSegments(Segment2DContainer & segments, coor_t tolorance)
+bool MeshFlow2D::RemoveDuplicatedSegments(Segment2DContainer & segments)
 {
-    using namespace boost::polygon;
-    voronoi_diagram<float_t> vd;
-    voronoi_builder<int32_t> builder;
-    std::unordered_map<size_t, CPtr<Segment2D<coor_t> > > segIdxMap;
-    for(auto & segment : segments){
-        const auto & low  = segment[0];
-        const auto & high = segment[1];
-        auto index = builder.insert_segment(low[0], low[1], high[0], high[1]);
-        segIdxMap.insert(std::make_pair(index, &segment));
-    }
-    builder.construct(&vd);
+    using EdgeSet = topology::UndirectedIndexEdgeSet;
+    using PointIdxMap = std::unordered_map<Point2D<coor_t>, size_t, PointHash<coor_t> >;
     
-    auto minDist = std::numeric_limits<float_t>::max();
-    using Edge = voronoi_edge<float_t>;
-    std::unordered_set<CPtr<Edge> > visited;
+    EdgeSet edgeSet;
+    size_t index = 0;
+    PointIdxMap pointIdxMap;
+    auto getIndex = [&pointIdxMap, &index](const Point2D<coor_t> & p) mutable
+    {
+        if(!pointIdxMap.count(p)){
+            pointIdxMap.insert(std::make_pair(p, index++));
+        }
+        return pointIdxMap.at(p);
+    };
 
-    size_t idx1, idx2;
-    auto iter = vd.edges().begin();
-    for(; iter != vd.edges().end(); ++iter){
-        if(!iter->is_primary()) continue;
-        auto twin = iter->twin();
-        auto self = twin->twin();
-        if(visited.count(self)) continue;
-        visited.insert(twin);
-
-        auto cell = iter->cell();
-        idx1 = cell->source_index();
-        cell = twin->cell();
-        idx2 = cell->source_index();
-        const auto & seg1 = *segIdxMap.at(idx1);
-        const auto & seg2 = *segIdxMap.at(idx2);
-        if(0 != orientation(seg1, seg2)) continue;
-        auto dist = euclidean_distance(seg1, seg2);
-        if(dist < minDist) minDist = dist;
+    auto size = segments.size();
+    auto iter = segments.begin();
+    while(iter != segments.end()){
+        IndexEdge e(getIndex((*iter)[0]), getIndex((*iter)[1]));
+        if(edgeSet.count(e)){
+            iter = segments.erase(iter);
+        }
+        else{
+            edgeSet.emplace(std::move(e));
+            ++iter;
+        }
     }
-    log::Info("minimum distance: %1%", minDist);
+    log::Info("remove duplicated edges: %1%", size - segments.size());
+    return true;   
+}
+
+
+bool MeshFlow2D::MergeClosestParallelSegmentsIteratively(Segment2DContainer & segments, coor_t tolerance)
+{
+    if(tolerance <= 0) return true;
+
+    size_t times = 0;
+    bool flag = true;
+    while(flag){
+        log::Info("merge parallel segments in iteration: %1%", ++times);
+        flag = MergeClosestParallelSegments(segments, tolerance);
+        RemoveDuplicatedSegments(segments);//wbtest
+    }
     return true;
 }
 
@@ -316,4 +322,117 @@ bool MeshFlow2D::GenerateReport(const std::string & filename, const Triangulatio
     auto evaluation = evaluator.Report();
     auto rpt = filename + ".rpt";
     return io::ExportReportFile(filename, evaluation, false);
+}
+
+bool MeshFlow2D::MergeClosestParallelSegments(Segment2DContainer & segments, coor_t tolerance)
+{
+    if(tolerance <= 0) return true;
+
+    using namespace boost::polygon;
+    using Edge = voronoi_edge<float_t>;
+    using Segment = typename Segment2DContainer::value_type;
+
+    voronoi_diagram<float_t> vd;
+    voronoi_builder<int32_t> builder;
+    std::unordered_map<size_t, CPtr<Segment> > segIdxMap;
+
+    log::Info("segment size: %1%", segments.size());
+    for(auto & segment : segments){
+        const auto & low  = segment[0];
+        const auto & high = segment[1];
+        auto index = builder.insert_segment(low[0], low[1], high[0], high[1]);
+        segIdxMap.insert(std::make_pair(index, &segment));
+    }
+    builder.construct(&vd);
+
+    std::list<Segment> added;
+    std::unordered_set<CPtr<Edge> > visited;
+    std::unordered_set<CPtr<Segment> > merged;
+    
+    float_t distSq = tolerance * tolerance;
+    auto minDist = std::numeric_limits<float_t>::max();
+    auto distFun = [&distSq](const Segment & s1, const Segment & s2)
+    {
+        auto d1 = PointSegmentDistanceSq(s1[0], s2);
+        auto d2 = PointSegmentDistanceSq(s1[1], s2);
+        if(math::LT(d1, distSq) && math::LT(d2, distSq)) return std::max(d1, d2);
+        
+        auto d3 = PointSegmentDistanceSq(s2[0], s1);
+        auto d4 = PointSegmentDistanceSq(s2[1], s1);
+        if(math::LT(d3, distSq) && math::LT(d4, distSq)) return std::max(d3, d4);
+
+        return std::numeric_limits<float_t>::max();;
+    };
+
+    size_t idx1, idx2;
+    for(auto iter = vd.edges().begin(); iter != vd.edges().end(); ++iter){
+        if(!iter->is_primary()) continue;
+        auto twin = iter->twin();
+        auto self = twin->twin();
+        if(visited.count(self)) continue;
+        visited.insert(twin);
+
+        auto cell = iter->cell();
+        idx1 = cell->source_index();
+        cell = twin->cell();
+        idx2 = cell->source_index();
+        CPtr<Segment> seg1 = segIdxMap.at(idx1);
+        CPtr<Segment> seg2 = segIdxMap.at(idx2);
+        if(merged.count(seg1) || merged.count(seg2))
+            continue;
+
+        // if(0 != orientation(*seg1, *seg2)) continue;
+        auto currSq = distFun(*seg1, *seg2);
+        if(math::GT(currSq, distSq)) continue;
+        // if(math::EQ(currSq, float_t(0))) continue;
+        if(currSq < minDist) minDist = currSq;
+        
+        merged.insert(seg1);
+        merged.insert(seg2);
+        MergeClosestParallelSegments(*seg1, *seg2, added);
+    }
+
+    bool flag = merged.size() > 0 ? true : false;
+    log::Info("minimum segment distance: %1%", std::sqrt(minDist));
+    log::Info("merged near segments: %1%", merged.size());
+
+    //remove merged segs
+    if(flag){
+        auto iter = segments.begin();
+        while(iter != segments.end()){
+            CPtr<Segment> curr = &(*iter);
+            if(merged.count(curr)){
+                merged.erase(curr);
+                iter = segments.erase(iter);
+            }
+            else iter++;
+        }
+        //insert added segs
+        segments.insert(segments.end(), added.begin(), added.end());
+    }
+    return flag;
+}
+
+void MeshFlow2D::MergeClosestParallelSegments(const Segment2D<coor_t> & seg1, const Segment2D<coor_t> & seg2, Segment2DContainer & added)
+{
+    std::vector<Point2D<coor_t> > points{ seg1[0], seg1[1], seg2[0], seg2[1] };
+    auto minX = std::min({seg1[0][0], seg1[1][0], seg2[0][0], seg2[1][0]});
+    auto maxX = std::max({seg1[0][0], seg1[1][0], seg2[0][0], seg2[1][0]});
+    auto minY = std::min({seg1[0][1], seg1[1][1], seg2[0][1], seg2[1][1]});
+    auto maxY = std::max({seg1[0][1], seg1[1][1], seg2[0][1], seg2[1][1]});
+    size_t coord = (maxX - minX) > (maxY - minY) ? 0 : 1;
+    auto func = [coord](const Point2D<coor_t> & p1, const Point2D<coor_t> & p2){ return p1[coord] < p2[coord]; };
+    std::sort(points.begin(), points.end(), func);
+    auto curr = points.begin();
+    while(curr != points.end()){
+        auto next = curr; next++;
+        if(next != points.end() && (*curr)[coord] == (*next)[coord]){
+            curr = points.erase(curr);
+        }
+        else curr++;
+    }
+    for(size_t i = 0; i < points.size() - 1; ++i){
+        size_t j = i + 1;
+        added.emplace_back(Segment2D<coor_t>(points[i], points[j]));
+    }
 }

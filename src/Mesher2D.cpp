@@ -83,8 +83,12 @@ bool Mesher2D::RunGenerateMesh()
     db.points.reset(new Point2DContainer);
     
     //
-    log::Info("start merge near edges..., tolerance: %1%", options.meshCtrl.tolerance);
-    res = MeshFlow2D::MergeClosestSegments(*db.segments, options.meshCtrl.tolerance);
+    log::Info("remove duplicate edges...");
+    res = MeshFlow2D::RemoveDuplicatedSegments(*db.segments);
+
+    coor_t tolerance = 100;//wbtest
+    log::Info("start merge near edges..., tolerance: %1%", tolerance);
+    res = MeshFlow2D::MergeClosestParallelSegmentsIteratively(*db.segments, tolerance);
     if(!res){
         log::Error("failed to merge near edges!");
         return false;
