@@ -59,7 +59,7 @@ bool Mesher2D::RunGenerateMesh()
     //
     log::Info("start calculate convex hull...");
     auto outline = ConvexHull(*db.inGeoms);
-    db.inGeoms->push_back(outline);
+    // db.inGeoms->push_back(outline);//wbtest
     Box2D<coor_t> bbox = Extent(outline);
 
 
@@ -82,11 +82,7 @@ bool Mesher2D::RunGenerateMesh()
     db.edges.reset(new IndexEdgeList);
     db.points.reset(new Point2DContainer);
     
-    //
-    log::Info("remove duplicate edges...");
-    res = MeshFlow2D::RemoveDuplicatedSegments(*db.segments);
-
-    coor_t tolerance = 100;//wbtest
+    coor_t tolerance = 0;//wbtest
     log::Info("start merge near edges..., tolerance: %1%", tolerance);
     res = MeshFlow2D::MergeClosestParallelSegmentsIteratively(*db.segments, tolerance);
     if(!res){
@@ -125,6 +121,7 @@ bool Mesher2D::RunGenerateMesh()
 
     if(options.maxGradeLvl > 0){
         size_t size = db.points->size();
+        log::Info("grade points option enabled, input geometries should have only one closure!");
         log::Info("start insert grade points..., level: %1%", options.maxGradeLvl);
         res = MeshFlow2D::AddPointsFromBalancedQuadTree(*db.points, *db.edges, options.maxGradeLvl);
         if(!res){

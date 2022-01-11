@@ -63,6 +63,7 @@ bool MeshFlow2D::ExtractIntersections(const PolygonContainer & polygons, Segment
     boost::polygon::intersect_segments(results, segments.begin(), segments.end());
     segments.clear();
     segments.insert(segments.end(), results.begin(), results.end());
+    RemoveDuplicatedSegments(segments);
     return true;
 }
 
@@ -94,7 +95,7 @@ bool MeshFlow2D::RemoveDuplicatedSegments(Segment2DContainer & segments)
             ++iter;
         }
     }
-    log::Info("remove duplicated edges: %1%", size - segments.size());
+    log::Debug("remove duplicated edges: %1%", size - segments.size());
     return true;   
 }
 
