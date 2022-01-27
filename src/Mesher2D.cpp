@@ -21,7 +21,21 @@ bool Mesher2D::Run()
 
 bool Mesher2D::RunTest()
 {
-    return false;
+    if(GetProjFileName().empty()) return false;
+
+    InitLogger();
+
+    bool res = true;
+    std::string fld = GetProjFileName() + ".fld";
+    std::string vtk = GetProjFileName() + ".vtk";
+    
+    Triangulation<Point3D<coor_t> > triangulation;
+    res = res && io::ImportFldFile(fld, triangulation);
+    log::Info("totol vertex: %1%", triangulation.points.size());
+    res = res && io::ExportVtkFile(vtk, triangulation);
+
+    CloseLogger();
+    return res;    
 }
 
 std::string Mesher2D::GetProjFileName() const

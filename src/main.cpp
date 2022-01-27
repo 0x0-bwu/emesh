@@ -212,7 +212,9 @@ int main(int argc, char *argv[])
     if(options.surfaceMesh){
         auto mesher = std::unique_ptr<Mesher2D>(new Mesher2D);
         options.SetMesh2Options(mesher->options);
-        res = mesher->Run();
+        if(options.testFlow)
+            res = mesher->RunTest();
+        else res = mesher->Run();
     }
     else{
         auto mesher = std::unique_ptr<Mesher3D>(new Mesher3D);
