@@ -700,7 +700,7 @@ bool MeshFileUtility3D::LoadLayerStackInfos(const std::string & filename, StackL
         std::getline(in, tmp);
         if(tmp.empty()) continue;
 
-        auto items = parser::Split(tmp, sp);
+        auto items = str::Split(tmp, sp);
         if(items.size() < 1) return false;
         layers = std::stol(items[0]);
         if(items.size() > 1) scale = std::stod(items[1]);
@@ -714,7 +714,7 @@ bool MeshFileUtility3D::LoadLayerStackInfos(const std::string & filename, StackL
         std::getline(in, tmp);
         if(tmp.empty()) continue;
 
-        auto items = parser::Split(tmp, sp);
+        auto items = str::Split(tmp, sp);
         if(items.size() < 2) return false;
         elevation = std::stod(items[0]) * scale;
         thickness = std::stod(items[1]) * scale;

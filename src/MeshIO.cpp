@@ -45,7 +45,7 @@ bool LoadDomDmcFiles(const std::string & dom, const std::string & dmc, std::map<
 bool LoadWktFile(const std::string & wkt, PolygonWithHolesContainer & pwhs)
 {
     pwhs.clear();
-    return geometry::GeometryIO::Read<PolygonWithHoles2D<coor_t> >(wkt, std::back_inserter(pwhs));
+    return geometry::GeometryIO::ReadWKT<PolygonWithHoles2D<coor_t> >(wkt, std::back_inserter(pwhs));
 }
 
 }//namespace io

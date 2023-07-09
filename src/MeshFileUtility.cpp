@@ -52,7 +52,7 @@ bool MeshFileUtility::LoadWktFile(const std::string & wkt, float_t scale, Polygo
 {
     polygons.clear();
     std::list<Polygon2D<float_t> > tmp;
-    if(!geometry::GeometryIO::Read<Polygon2D<float_t> >(wkt, std::back_inserter(tmp))) return false;
+    if(!geometry::GeometryIO::ReadWKT<Polygon2D<float_t> >(wkt, std::back_inserter(tmp))) return false;
 
     auto trans = makeScaleTransform2D(scale);
     for(const auto & t : tmp){
