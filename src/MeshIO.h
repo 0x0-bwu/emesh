@@ -1,5 +1,4 @@
-#ifndef EMESH_IO_MESHIO_H
-#define EMESH_IO_MESHIO_H
+#pragma once
 #include "MeshCommon.h"
 #include <string>
 #include <map>
@@ -11,5 +10,3 @@ bool LoadWktFile(const std::string & wkt, PolygonWithHolesContainer & pwhs);
 
 }//namespace io
 }//namespace emesh
-
-#endif//EMESH_IO_MESHIO_H

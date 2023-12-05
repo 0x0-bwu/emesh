@@ -20,8 +20,8 @@ bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const 
     in.pointlist = new double[in.numberofpoints * in.mesh_dim];
     
     index = 0;
-    for(size_t i = 0; i < in.numberofpoints; ++i)
-        for(size_t j = 0; j < in.mesh_dim; ++j)
+    for(int i = 0; i < in.numberofpoints; ++i)
+        for(int j = 0; j < in.mesh_dim; ++j)
             in.pointlist[index++] = points[i][j];
     
     in.firstnumber = 0;
@@ -52,17 +52,17 @@ bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const 
     index = 0;
     tet.points.resize(out.numberofpoints);
     tet.vertices.resize(out.numberofpoints);
-    for(size_t i = 0; i < out.numberofpoints; ++i){
+    for (int i = 0; i < out.numberofpoints; ++i){
         tet.vertices[i].index = i;
-        for(size_t j = 0; j < out.mesh_dim; ++j)
+        for (int j = 0; j < out.mesh_dim; ++j)
             tet.points[i][j] = out.pointlist[index++];
     }
 
     index = 0; 
     tet.tetrahedrons.resize(out.numberoftetrahedra);
-    for(size_t i = 0; i < out.numberoftetrahedra; ++i){
+    for (int i = 0; i < out.numberoftetrahedra; ++i){
         auto & tetrahedron = tet.tetrahedrons[i];
-        for(size_t j = 0; j < 4; ++j){
+        for (int j = 0; j < 4; ++j){
             tetrahedron.vertices[j] = out.tetrahedronlist[index++];
             tet.vertices[tetrahedron.vertices[j]].tetrahedrons.insert(i);
         }
@@ -89,8 +89,8 @@ bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const 
     in.pointlist = new double[in.numberofpoints * in.mesh_dim];
     
     index = 0;
-    for(size_t i = 0; i < in.numberofpoints; ++i)
-        for(size_t j = 0; j < in.mesh_dim; ++j)
+    for (int i = 0; i < in.numberofpoints; ++i)
+        for (int j = 0; j < in.mesh_dim; ++j)
             in.pointlist[index++] = points[i][j];
     
     in.firstnumber = 0;
@@ -139,17 +139,17 @@ bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const 
     index = 0;
     tet.points.resize(out.numberofpoints);
     tet.vertices.resize(out.numberofpoints);
-    for(size_t i = 0; i < out.numberofpoints; ++i){
+    for (int i = 0; i < out.numberofpoints; ++i){
         tet.vertices[i].index = i;
-        for(size_t j = 0; j < out.mesh_dim; ++j)
+        for (int j = 0; j < out.mesh_dim; ++j)
             tet.points[i][j] = out.pointlist[index++];
     }
 
     index = 0; 
     tet.tetrahedrons.resize(out.numberoftetrahedra);
-    for(size_t i = 0; i < out.numberoftetrahedra; ++i){
+    for (int i = 0; i < out.numberoftetrahedra; ++i){
         auto & tetrahedron = tet.tetrahedrons[i];
-        for(size_t j = 0; j < 4; ++j){
+        for (int j = 0; j < 4; ++j){
             tetrahedron.vertices[j] = out.tetrahedronlist[index++];
             tet.vertices[tetrahedron.vertices[j]].tetrahedrons.insert(i);
         }

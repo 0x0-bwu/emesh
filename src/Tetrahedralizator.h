@@ -1,5 +1,4 @@
-#ifndef EMESH_TETRAHEDRALIZATOR_H
-#define EMESH_TETRAHEDRALIZATOR_H
+#pragma once
 #include "generic/geometry/Tetrahedralization.hpp"
 #include "MeshCommon.h"
 #include <list>
@@ -24,4 +23,3 @@ public:
     bool Tetrahedralize(const std::vector<Point> & points, const std::list<Face> & faces, const std::list<Edge> & edges);
 };
 }//namespace emesh
-#endif//EMESH_TETRAHEDRALIZATOR_H

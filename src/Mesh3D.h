@@ -1,5 +1,4 @@
-#ifndef EMESH_MESH3D_H
-#define EMESH_MESH3D_H
+#pragma once
 #include "generic/geometry/Tetrahedralization.hpp"
 #include "generic/geometry/BooleanOperation.hpp"
 #include "generic/geometry/HashFunction.hpp"
@@ -170,4 +169,3 @@ private:
 };
 
 }//namespace emesh
-#endif//EMESH_MESH3D_H

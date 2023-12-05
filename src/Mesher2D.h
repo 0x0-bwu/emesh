@@ -1,5 +1,4 @@
-#ifndef EMESH_MESHER2D_H
-#define EMESH_MESHER2D_H
+#pragma once
 #include <boost/core/noncopyable.hpp>
 #include "generic/geometry/TriangleEvaluator.hpp"
 #include "generic/geometry/Triangulator.hpp"
@@ -74,4 +73,3 @@ public:
     static bool GenerateReport(const std::string & filename, const TriangulationData & triangulation, float_t scale);
 };
 }//namespace emesh
- #endif//EMESH_MESHER2D_H

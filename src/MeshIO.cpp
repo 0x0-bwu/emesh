@@ -27,7 +27,7 @@ bool LoadDomDmcFiles(const std::string & dom, const std::string & dmc, std::map<
 
         Polygon2D<coor_t> polygon;
         polygon.GetPoints().reserve(ptSize);
-        for(size_t i = 0; i < ptSize; ++i){
+        for(int i = 0; i < ptSize; ++i){
             f_dom >> x >> y;
             polygon << Point2D<coor_t>(x, y);
         }

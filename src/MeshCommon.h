@@ -1,5 +1,4 @@
-#ifndef EMESH_MESHCOMMON_H
-#define EMESH_MESHCOMMON_H
+#pragma once
 #include "generic/geometry/TriangleEvaluator.hpp"
 #include "generic/geometry/PolygonWithHoles.hpp"
 #include "generic/geometry/Triangulator.hpp"
@@ -68,4 +67,3 @@ using StackLayerPolygons = std::vector<SPtr<PolygonContainer> >;
 using InterfaceIntersections = std::vector<SPtr<Segment2DContainer> >;
 
 }//namespace emesh
-#endif//EMESH_MESHCOMMON_H

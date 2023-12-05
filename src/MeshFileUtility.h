@@ -1,5 +1,4 @@
-#ifndef EMESH_MESHFILEUTILITY_H
-#define EMESH_MESHFILEUTILITY_H
+#pragma once
 #include "MeshCommon.h"
 #include "Mesher2D.h"
 #include <string>
@@ -19,4 +18,3 @@ public:
     static bool ExportReportFile(const std::string & rpt, const Mesher2D::MeshEvaluation & evaluation, float_t scale, bool pureText = false);
 };
 }//namespace emesh
-#endif//EMESH_MESHFILEUTILITY_H

@@ -194,12 +194,14 @@ bool MeshFlow3D::AddGradePointsForMeshModels(std::vector<MeshSketchModel> & mode
 {
     for(auto & model : models)
         AddGradePointsForMeshModel(model, threshold);
+    return true;
 }
 
 bool MeshFlow3D::AddGradePointsForMeshModel(MeshSketchModel & model, size_t threshold)
 {
     for(size_t i = 0; i < model.layers.size(); ++i)
         AddGradePointsForMeshLayer(model.layers[i], threshold);
+    return true;
 }
 
 bool MeshFlow3D::AddGradePointsForMeshLayer(MeshSketchLayer & layer, size_t threshold)
@@ -210,6 +212,7 @@ bool MeshFlow3D::AddGradePointsForMeshLayer(MeshSketchLayer & layer, size_t thre
             layer.addPoints[i] = AddPointsFromBalancedQuadTree(*(layer.constrains[i]), threshold);
         else layer.addPoints[i] = AddPointsFromBalancedQuadTree(*layer.polygons, threshold);
     }
+    return true;
 }
 
 bool MeshFlow3D::SliceOverheightLayers(MeshSketchModel & model, float_t ratio)
@@ -282,7 +285,7 @@ bool MeshFlow3D::ExtractTopology(const MeshSketchLayer & layer, Point3DContainer
     points.clear();
 
     using EdgeSet = topology::UndirectedIndexEdgeSet;
-    using LayerIdxMap = std::unordered_map<coor_t, size_t>;
+    // using LayerIdxMap = std::unordered_map<coor_t, size_t>;
     using PointIdxMap = std::unordered_map<Point2D<coor_t>, size_t, PointHash<coor_t> >;
 
     EdgeSet edgeSet;
@@ -692,7 +695,7 @@ bool MeshFileUtility3D::LoadLayerStackInfos(const std::string & filename, StackL
     std::string tmp;
     size_t line = 0;
 
-    size_t layers;
+    size_t layers = 0;
     double scale = 1.0;
     double elevation, thickness;
     while(!in.eof()){

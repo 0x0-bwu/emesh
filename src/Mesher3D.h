@@ -1,5 +1,4 @@
-#ifndef EMESH_MESHER3D_H
-#define EMESH_MESHER3D_H
+#pragma once
 #include <boost/core/noncopyable.hpp>
 #include "generic/geometry/Tetrahedralization.hpp"
 #include "generic/math/MathUtility.hpp"
@@ -46,4 +45,3 @@ private:
     bool RunGenerateMesh();
 };
 }//namespace emesh
- #endif//EMESH_MESHER3D_H

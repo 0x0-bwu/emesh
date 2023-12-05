@@ -13,7 +13,7 @@ bool MeshFileUtility::LoadMeshCtrlFile(const std::string & txt, Mesh2Ctrl & ctrl
     if(!in.is_open()) return false;
 
     std::string line, tmp;
-    float_t scale(0), tolerance(0), maxEdge(0), minEdge(0), minAlpha(0);
+    float_t  tolerance(0), maxEdge(0), minEdge(0), minAlpha(0);
     while(!in.eof()){
         line.clear();
         std::getline(in, line);
@@ -85,7 +85,7 @@ bool MeshFileUtility::LoadDomDmcFiles(const std::string & dom, const std::string
 
         Polygon2D<coor_t> polygon;
         polygon.GetPoints().reserve(ptSize);
-        for(size_t i = 0; i < ptSize; ++i){
+        for(int i = 0; i < ptSize; ++i){
             f_dom >> x >> y;
             polygon << Point2D<coor_t>(scale2Int * x, scale2Int * y);
         }
@@ -102,9 +102,9 @@ bool MeshFileUtility::ImportMshFile(const std::string & msh, Triangulation<Point
     if(!in.is_open()) return false;
     
     triangulation.Clear();
-    auto & points = triangulation.points;
-    auto & vertices = triangulation.vertices;
-    auto & triangles = triangulation.triangles;
+    [[maybe_unused]] auto & points = triangulation.points;
+    [[maybe_unused]] auto & vertices = triangulation.vertices;
+    [[maybe_unused]] auto & triangles = triangulation.triangles;
 
     std::string line;
     size_t nodes, elements;

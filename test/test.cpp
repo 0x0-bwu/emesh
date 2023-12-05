@@ -83,7 +83,7 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
             if("domdmc" == fmt || "dmcdom == fmt") mOp.iFileFormat = FileFormat::DomDmc;
             else if("wkt" == fmt) mOp.iFileFormat = FileFormat::WKT;
             else{
-                os << format::Format2String("Error: unsupported input file format: %1%", fmt) << GENERIC_DEFAULT_EOL;
+                os << fmt::Fmt2Str("Error: unsupported input file format: %1%", fmt) << GENERIC_DEFAULT_EOL;
                 return false;
             }
         }
@@ -94,7 +94,7 @@ bool ParseOptions(int argc, char *argv[], MeshOptions & mOp, std::ostream & os =
             if("msh" == fmt) mOp.oFileFormat = FileFormat::MSH;
             else if("vtk" == fmt) mOp.oFileFormat = FileFormat::VTK;
             else{
-                os << format::Format2String("Error: unsupported output file format: %1%", fmt) << GENERIC_DEFAULT_EOL;
+                os << fmt::Fmt2Str("Error: unsupported output file format: %1%", fmt) << GENERIC_DEFAULT_EOL;
                 return false;
             }
         }

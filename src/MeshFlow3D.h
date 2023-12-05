@@ -1,5 +1,4 @@
-#ifndef EMESH_MESHFLOW3D_H
-#define EMESH_MESHFLOW3D_H
+#pragma once
 #include "Mesh3D.h"
 #include <memory>
 namespace emesh {
@@ -65,4 +64,3 @@ public:
 };
 
 }//namespace emesh
-#endif//EMESH_MESHFLOW3D_H

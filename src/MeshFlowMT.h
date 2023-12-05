@@ -1,5 +1,4 @@
-#ifndef EMESH_MESHFLOWMT_H
-#define EMESH_MESHFLOWMT_H
+#pragma once
 #include "generic/thread/ThreadPool.hpp"
 #include "MeshFlow3D.h"
 #include <limits>
@@ -21,4 +20,3 @@ public:
 };
 
 }//namespace emesh
-#endif//EMESH_MESHFLOWMT_H
