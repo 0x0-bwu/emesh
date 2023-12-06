@@ -3,7 +3,7 @@ using namespace generic;
 namespace emesh {
 namespace io {
 
-bool LoadDomDmcFiles(const std::string & dom, const std::string & dmc, std::map<int, SPtr<PolygonContainer> > & results)
+bool LoadDomDmcFiles(const std::string & dom, const std::string & dmc, std::map<int, std::shared_ptr<PolygonContainer> > & results)
 {
     results.clear();
     
