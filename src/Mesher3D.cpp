@@ -6,7 +6,7 @@ using namespace emesh;
 
 Mesher3D::Mesher3D()
 {
-    std::string dataPath = filesystem::CurrentPath() + 
+    std::string dataPath = fs::CurrentPath() + 
                             GENERIC_FOLDER_SEPS + "thirdpart" + 
                             GENERIC_FOLDER_SEPS + "internal" + 
                             GENERIC_FOLDER_SEPS + "testdata" +

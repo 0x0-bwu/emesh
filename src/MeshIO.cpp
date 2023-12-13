@@ -1,4 +1,5 @@
 #include "MeshIO.h"
+#include "generic/geometry/GeometryIO.hpp"
 using namespace generic;
 namespace emesh {
 namespace io {

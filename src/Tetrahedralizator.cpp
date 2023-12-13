@@ -115,7 +115,7 @@ bool Tetrahedralizator::Tetrahedralize(const std::vector<Point> & points, const 
         auto p = &(f->polygonlist[0]);
         p->numberofvertices = face.size();
         p->vertexlist = new int[p->numberofvertices];
-        for(size_t j = 0; j < p->numberofvertices; ++j){
+        for(int j = 0; j < p->numberofvertices; ++j){
             p->vertexlist[j] = face[j];
         }
     }

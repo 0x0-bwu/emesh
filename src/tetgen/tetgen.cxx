@@ -2198,18 +2198,18 @@ bool tetgenio::load_vtk(char* filebasename)
         for(i = 0; i < nverts; i++) {
           coord = &pointlist[i * 3];
           if(!strcmp(fmt, "double")) {
-            [[maybe_unsed]] auto res1 = fread((char*)(&(coord[0])), sizeof(double), 1, fp);
-            [[maybe_unsed]] auto res2 = fread((char*)(&(coord[1])), sizeof(double), 1, fp);
-            [[maybe_unsed]] auto res3 = fread((char*)(&(coord[2])), sizeof(double), 1, fp);
+            [[maybe_unused]] auto res1 = fread((char*)(&(coord[0])), sizeof(double), 1, fp);
+            [[maybe_unused]] auto res2 = fread((char*)(&(coord[1])), sizeof(double), 1, fp);
+            [[maybe_unused]] auto res3 = fread((char*)(&(coord[2])), sizeof(double), 1, fp);
             if(ImALittleEndian){
               swapBytes((unsigned char *) &(coord[0]), sizeof(coord[0]));
               swapBytes((unsigned char *) &(coord[1]), sizeof(coord[1]));
               swapBytes((unsigned char *) &(coord[2]), sizeof(coord[2]));
             }
           } else if(!strcmp(fmt, "float")) {
-            [[maybe_unsed]] auto res1 = fread((char*)(&_x), sizeof(float), 1, fp);
-            [[maybe_unsed]] auto res2 = fread((char*)(&_y), sizeof(float), 1, fp);
-            [[maybe_unsed]] auto res3 = fread((char*)(&_z), sizeof(float), 1, fp);
+            [[maybe_unused]] auto res1 = fread((char*)(&_x), sizeof(float), 1, fp);
+            [[maybe_unused]] auto res2 = fread((char*)(&_y), sizeof(float), 1, fp);
+            [[maybe_unused]] auto res3 = fread((char*)(&_z), sizeof(float), 1, fp);
             if(ImALittleEndian){
               swapBytes((unsigned char *) &_x, sizeof(_x));
               swapBytes((unsigned char *) &_y, sizeof(_y));

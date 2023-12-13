@@ -8,6 +8,6 @@ MeshFlow3D.cpp
 MeshFlowMT.cpp
 MeshIO.cpp
 Tetrahedralizator.cpp
-../thirdpart/tetgen/predicates.cxx
-../thirdpart/tetgen/tetgen.cxx
+./tetgen/predicates.cxx
+./tetgen/tetgen.cxx
 )

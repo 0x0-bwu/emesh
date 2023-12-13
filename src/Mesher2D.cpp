@@ -23,7 +23,7 @@ Mesher2D::~Mesher2D()
 
 bool Mesher2D::Run()
 {
-    if(options.workPath.empty() || options.projName.empty()) return false;
+    if (options.workPath.empty() || options.projName.empty()) return false;
     
     InitLogger();
     
@@ -56,7 +56,7 @@ bool Mesher2D::RunGenerateMesh()
     bool res(true);
     //
     std::string ctrlFile = options.workPath + GENERIC_FOLDER_SEPS + "mesh_input.txt";
-    if(filesystem::FileExists(ctrlFile)){
+    if (fs::FileExists(ctrlFile)){
         log::Info("find input mesh ctrl file %1%", ctrlFile);
 
         res = MeshFileUtility::LoadMeshCtrlFile(ctrlFile, options.meshCtrl);
@@ -174,25 +174,25 @@ bool Mesher2D::RunGenerateMesh()
 
 bool Mesher2D::RunMeshEvaluation()
 {
-    if(!db.triangulation){
+    if (not db.triangulation) {
         if(options.iFileFormat == FileFormat::MSH){
             std::string mshFile = options.workPath + GENERIC_FOLDER_SEPS + options.projName + ".msh";
             log::Info("loading mesh data from %1%", mshFile);
-            if(!filesystem::FileExists(mshFile)){
+            if (not fs::FileExists(mshFile)) {
                 log::Error("file %1% not exist!", mshFile);
                 return false;
             }
 
             db.triangulation.reset(new TriangulationData);
             auto res = MeshFileUtility::ImportMshFile(mshFile, *db.triangulation, options.meshCtrl.scale2Int);
-            if(!res){
+            if (not res) {
                 log::Error("fail to load mesh from %1%", mshFile);
                 return false;
             }
         }
     }
 
-    if(!db.triangulation){
+    if (not db.triangulation) {
         log::Fatal("no input mesh data!");
         return false;
     }

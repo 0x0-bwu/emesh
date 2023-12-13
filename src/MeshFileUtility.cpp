@@ -1,5 +1,6 @@
 #include "MeshFileUtility.h"
 #include "generic/geometry/TetrahedralizationIO.hpp"
+#include "generic/geometry/GeometryIO.hpp"
 #include "generic/geometry/Transform.hpp"
 #include "generic/tools/FileSystem.hpp"
 #include "generic/tools/Tools.hpp"

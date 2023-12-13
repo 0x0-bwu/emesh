@@ -24,7 +24,7 @@ struct Mesh2Options
 struct Mesh2DB : private boost::noncopyable
 {
     Mesh2DB() = default;
-
+    
     template<typename T>
     using Data = std::unique_ptr<T>;
 
