@@ -21,11 +21,11 @@ using Ptr = T*;
 template <typename T>
 using CPtr = const T*;
 
-template <typename T, typename... Args>
-using UPtr = std::unique_ptr<T, Args...>;
+template <typename T>
+using UPtr = std::unique_ptr<T>;
 
-template <typename T, typename... Args>
-using SPtr = std::shared_ptr<T, Args...>;
+template <typename T>
+using SPtr = std::shared_ptr<T>;
 
 enum class FileFormat { DomDmc, WKT, MSH, VTK };
 enum class MeshTask { MeshGeneration, MeshEvaluation };

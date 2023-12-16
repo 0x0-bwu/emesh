@@ -58,7 +58,7 @@ bool MeshFileUtility::LoadWktFile(const std::string & wkt, float_t scale, Polygo
     auto trans = makeScaleTransform2D(scale);
     for(const auto & t : tmp){
         auto ts = trans * t;
-        polygons.emplace_back(std::move(ts.Cast<coor_t>()));
+        polygons.emplace_back(ts.Cast<coor_t>());
     }
     return true;
 }
