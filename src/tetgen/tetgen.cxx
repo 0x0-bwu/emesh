@@ -3199,7 +3199,8 @@ bool tetgenbehavior::parse_commandline(int argc, char **argv)
             k++;
           }
           workstring[k] = '\0';
-          brio_threshold = (int) strtol(workstring, (char **) &workstring, 0);
+          char * source = workstring;
+          brio_threshold = (int) strtol(source, (char **) &workstring, 0);
         }
         if ((argv[i][j + 1] == '/') || (argv[i][j + 1] == ',')) {
           j++;
@@ -3228,7 +3229,8 @@ bool tetgenbehavior::parse_commandline(int argc, char **argv)
               k++;
             }
             workstring[k] = '\0';
-            hilbert_limit = (int) strtol(workstring, (char **) &workstring, 0);
+            char * source = workstring;
+            hilbert_limit = (int) strtol(source, (char **) &workstring, 0);
           }
         }
         if ((argv[i][j + 1] == '/') || (argv[i][j + 1] == ',')) {

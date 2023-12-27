@@ -10,7 +10,7 @@ namespace emesh {
 class MeshSketchLayer
 {
 public:
-    Polygon2D<coor_t> outline;//wbtest
+    Polygon2D<coor_t> outline;
     coor_t height[2] = {0, 0};//0 - top, 1 - bot
     SPtr<PolygonContainer> polygons = nullptr;
     SPtr<Segment2DContainer> constrains[2] = { nullptr, nullptr };
