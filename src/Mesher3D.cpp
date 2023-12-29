@@ -56,8 +56,8 @@ bool Mesher3D::RunTest()
     std::list<std::vector<size_t> > faces {{0, 1, 2, 3}, {4, 5, 6, 7}, {0, 1, 5, 4}, {1, 2, 6, 5}, {2, 3, 7, 6}, {3, 0, 4, 7}};
     std::list<IndexEdge> edges {{0, 8}, {1, 8}, {2, 8}, {3, 8}};
     auto res = MeshFlow3D::Tetrahedralize(points, faces, edges, tet);
-    std::cout << "total nodes: " << tet.vertices.size() << GENERIC_DEFAULT_EOL;
-    std::cout << "total elements: " << tet.tetrahedrons.size() << std::endl;
+    generic::log::Trace("total nodes: %1%", tet.vertices.size());
+    generic::log::Trace("total elements: %1%", tet.tetrahedrons.size());
     return res;
 }
 
